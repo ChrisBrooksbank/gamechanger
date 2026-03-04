@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameChanger — Spin the Wheel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-deep: #1a1025;
+  --bg-card: #261a35;
+  --bg-card-hover: #2f2240;
+  --accent-gold: #ffc857;
+  --accent-coral: #ff6b6b;
+  --accent-teal: #4ecdc4;
+  --text-primary: #f0e6ff;
+  --text-secondary: #b8a5d0;
+  --text-muted: #7a6890;
+  --border: #3d2d52;
+  --shadow-glow: rgba(255, 200, 87, 0.25);
+  --radius: 12px;
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family: 'Nunito', system-ui, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(78, 205, 196, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(255, 107, 107, 0.06), transparent),
+    radial-gradient(ellipse 50% 50% at 10% 60%, rgba(255, 200, 87, 0.05), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Subtle dot grid overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Layout ─── */
+.app {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 100dvh;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  position: relative;
+}
+
+.title {
+  font-family: 'Bangers', cursive;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  letter-spacing: 0.06em;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-coral));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 8px rgba(255, 200, 87, 0.3));
+  user-select: none;
+}
+
+.title span {
+  display: block;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.32em;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  -webkit-text-fill-color: var(--text-secondary);
+  filter: none;
+  margin-top: 0.2em;
+}
+
+/* ─── Wheel Container ─── */
+.wheel-stage {
+  position: relative;
+  width: min(82vw, 480px);
+  aspect-ratio: 1;
+  margin-bottom: 1.5rem;
+  flex-shrink: 0;
+}
+
+.wheel-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+}
+
+/* Pointer */
+.pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 18px solid transparent;
+  border-right: 18px solid transparent;
+  border-top: 36px solid var(--accent-gold);
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+  z-index: 10;
+  transition: filter 0.1s;
+}
+.pointer::after {
+  content: '';
+  position: absolute;
+  top: -38px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  box-shadow: 0 0 8px var(--shadow-glow);
+}
+
+.pointer.tick {
+  filter: drop-shadow(0 3px 12px rgba(255,200,87,0.8));
+}
+
+/* ─── Spin Button ─── */
+.spin-btn {
+  font-family: 'Bangers', cursive;
+  font-size: 1.8rem;
+  letter-spacing: 0.12em;
+  padding: 0.6em 2.4em;
+  border: none;
+  border-radius: 60px;
+  background: linear-gradient(135deg, var(--accent-gold), #ffaa00);
+  color: var(--bg-deep);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow:
+    0 4px 16px rgba(255, 200, 87, 0.35),
+    inset 0 2px 0 rgba(255,255,255,0.3),
+    inset 0 -2px 0 rgba(0,0,0,0.15);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.spin-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow:
+    0 6px 24px rgba(255, 200, 87, 0.5),
+    inset 0 2px 0 rgba(255,255,255,0.3),
+    inset 0 -2px 0 rgba(0,0,0,0.15);
+}
+.spin-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+.spin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.spin-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.25) 55%, transparent 60%);
+  transform: translateX(-100%);
+  animation: btnSheen 3s infinite 1s;
+}
+@keyframes btnSheen {
+  0%, 100% { transform: translateX(-100%); }
+  20% { transform: translateX(100%); }
+  21% { transform: translateX(-100%); }
+}
+
+/* ─── Sidebar Toggle (mobile) ─── */
+.sidebar-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 200;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.sidebar-toggle:hover { background: var(--bg-card-hover); }
+
+/* ─── Sidebar ─── */
+.sidebar {
+  width: 340px;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar h2 {
+  font-family: 'Bangers', cursive;
+  font-size: 1.4rem;
+  letter-spacing: 0.05em;
+  color: var(--accent-gold);
+  margin-bottom: 1rem;
+}
+
+.sidebar h3 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin: 1.2rem 0 0.6rem;
+}
+
+/* Game list */
+.game-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.game-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  transition: background 0.15s;
+  cursor: default;
+}
+.game-item:hover { background: var(--bg-card-hover); }
+
+.game-item .color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.game-item label {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.game-item label .game-url-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.game-item.disabled label {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.toggle .slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.25s;
+}
+.toggle .slider::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  bottom: 3px;
+  background: var(--text-secondary);
+  border-radius: 50%;
+  transition: transform 0.25s, background 0.25s;
+}
+.toggle input:checked + .slider {
+  background: var(--accent-teal);
+}
+.toggle input:checked + .slider::before {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+/* Delete custom game */
+.game-item .delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  line-height: 1;
+}
+.game-item .delete-btn:hover {
+  color: var(--accent-coral);
+  background: rgba(255, 107, 107, 0.1);
+}
+
+/* Add game form */
+.add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.add-form input {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.add-form input::placeholder { color: var(--text-muted); }
+.add-form input:focus { border-color: var(--accent-teal); }
+
+.add-form button {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent-teal);
+  color: var(--bg-deep);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.add-form button:hover { opacity: 0.85; }
+
+/* ─── Result Overlay ─── */
+.result-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 5, 18, 0.85);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+.result-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.result-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2.5rem 3rem;
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+  transform: scale(0.85) translateY(30px);
+  transition: transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,200,87,0.1);
+}
+.result-overlay.visible .result-card {
+  transform: scale(1) translateY(0);
+}
+
+.result-card .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.result-card .game-name {
+  font-family: 'Bangers', cursive;
+  font-size: clamp(2rem, 6vw, 3rem);
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-coral));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+}
+
+.result-card .btn-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.result-card .btn {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.65em 1.6em;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+  display: inline-block;
+}
+.result-card .btn:hover { transform: translateY(-1px); }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-gold), #ffaa00);
+  color: var(--bg-deep);
+  box-shadow: 0 4px 16px rgba(255,200,87,0.3);
+}
+.btn-secondary {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  border: 1px solid var(--border) !important;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+/* ─── Confetti Canvas ─── */
+#confetti-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 501;
+  pointer-events: none;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 800px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 150;
+    transform: translateX(100%);
+    box-shadow: -8px 0 32px rgba(0,0,0,0.4);
+    width: min(340px, 85vw);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 140;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .sidebar-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (min-width: 801px) {
+  .sidebar-toggle { display: none; }
+  .sidebar-backdrop { display: none; }
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── No-games message ─── */
+.no-games {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+.no-games strong {
+  display: block;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <main class="main">
+    <h1 class="title">GameChanger<span>Spin the wheel, pick a game</span></h1>
+    <div class="wheel-stage" id="wheel-stage">
+      <canvas class="wheel-canvas" id="wheel-canvas"></canvas>
+      <div class="pointer" id="pointer"></div>
+    </div>
+    <button class="spin-btn" id="spin-btn">SPIN</button>
+    <div class="no-games" id="no-games" style="display:none">
+      <strong>No games on the wheel!</strong>
+      Toggle some games on in the sidebar.
+    </div>
+  </main>
+
+  <aside class="sidebar" id="sidebar">
+    <h2>Game List</h2>
+    <h3>Board Games</h3>
+    <ul class="game-list" id="game-list"></ul>
+    <div class="add-form" id="add-form">
+      <h3 style="margin-top:0">Add Custom Game</h3>
+      <input type="text" id="input-name" placeholder="Game name" maxlength="40">
+      <input type="url" id="input-url" placeholder="URL (optional)">
+      <button id="add-btn">+ Add Game</button>
+    </div>
+  </aside>
+</div>
+
+<button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle game list">&#9776;</button>
+<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+<div class="result-overlay" id="result-overlay">
+  <div class="result-card">
+    <div class="label">Tonight you're playing</div>
+    <div class="game-name" id="result-name">—</div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="result-link" href="#" target="_blank" rel="noopener">Go to Game</a>
+      <button class="btn btn-secondary" id="result-respin">Spin Again</button>
+      <button class="btn btn-ghost" id="result-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="confetti-canvas"></canvas>
+
+<script>
+// ─── Default Games ───
+const DEFAULT_GAMES = [
+  { name: 'TimeGuessr', url: 'https://timeguessr.com/', enabled: true, custom: false },
+  { name: 'GeoGuessr', url: 'https://www.geoguessr.com/', enabled: true, custom: false },
+  { name: 'Scattergories', url: 'https://swellgarfo.com/scattergories/', enabled: true, custom: false },
+  { name: 'Skribbl', url: 'https://skribbl.io', enabled: true, custom: false },
+  { name: 'Globle', url: 'https://globle.org/', enabled: true, custom: false },
+  { name: 'Flagle', url: 'https://flagle.org/', enabled: true, custom: false },
+  { name: 'Connections', url: 'https://www.nytimes.com/games/connections', enabled: true, custom: false },
+  { name: 'Spyfall', url: 'https://www.spyfall.app/play', enabled: true, custom: false },
+  { name: 'Heardle', url: 'https://songquiz.io/heardle', enabled: true, custom: false },
+  { name: 'Murdle', url: 'https://murdle.com/', enabled: true, custom: false },
+  { name: 'BBC News Quiz', url: 'https://www.bbc.co.uk/news/topics/crxd18199v9t', enabled: true, custom: false },
+];
+
+const SEGMENT_COLORS = [
+  '#ff6b6b', '#ffc857', '#4ecdc4', '#a06cd5',
+  '#ff9f43', '#6ec6ff', '#ff78ae', '#7bed9f',
+  '#ffd93d', '#6c5ce7', '#00b894', '#fd79a8',
+  '#e17055', '#74b9ff', '#a29bfe', '#55efc4',
+  '#fdcb6e', '#e84393', '#0984e3', '#00cec9',
+];
+
+// ─── State ───
+let games = [];
+let spinning = false;
+let currentAngle = 0;
+let audioCtx = null;
+
+// ─── DOM ───
+const canvas = document.getElementById('wheel-canvas');
+const ctx = canvas.getContext('2d');
+const spinBtn = document.getElementById('spin-btn');
+const gameListEl = document.getElementById('game-list');
+const pointer = document.getElementById('pointer');
+const resultOverlay = document.getElementById('result-overlay');
+const resultName = document.getElementById('result-name');
+const resultLink = document.getElementById('result-link');
+const resultRespin = document.getElementById('result-respin');
+const resultClose = document.getElementById('result-close');
+const sidebar = document.getElementById('sidebar');
+const sidebarToggle = document.getElementById('sidebar-toggle');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+const noGamesMsg = document.getElementById('no-games');
+const confettiCanvas = document.getElementById('confetti-canvas');
+const confettiCtx = confettiCanvas.getContext('2d');
+
+// ─── LocalStorage ───
+function loadGames() {
+  const stored = localStorage.getItem('gamechanger_games');
+  if (stored) {
+    try { games = JSON.parse(stored); return; } catch(e) {}
+  }
+  games = DEFAULT_GAMES.map(g => ({ ...g }));
+  saveGames();
+}
+
+function saveGames() {
+  localStorage.setItem('gamechanger_games', JSON.stringify(games));
+}
+
+function getActiveGames() {
+  return games.filter(g => g.enabled);
+}
+
+// ─── Audio ───
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playTick() {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(1800, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.04);
+  gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.06);
+}
+
+function playVictory() {
+  if (!audioCtx) return;
+  const notes = [523, 659, 784, 1047];
+  notes.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    const t = audioCtx.currentTime + i * 0.12;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.15, t + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.start(t);
+    osc.stop(t + 0.35);
+  });
+}
+
+// ─── Wheel Rendering ───
+function resizeCanvas() {
+  const stage = document.getElementById('wheel-stage');
+  const size = stage.clientWidth;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function drawWheel(angle) {
+  const active = getActiveGames();
+  const size = canvas.clientWidth;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = (size / 2) - 8;
+
+  ctx.clearRect(0, 0, size, size);
+
+  if (active.length === 0) {
+    // Draw empty wheel
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#2a1f3a';
+    ctx.fill();
+    ctx.strokeStyle = '#3d2d52';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    drawHub(cx, cy, r);
+    return;
+  }
+
+  const sliceAngle = (Math.PI * 2) / active.length;
+
+  active.forEach((game, i) => {
+    const startAngle = angle + i * sliceAngle;
+    const endAngle = startAngle + sliceAngle;
+
+    // Segment
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
+    ctx.fill();
+
+    // Subtle inner shadow
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.clip();
+    const grad = ctx.createRadialGradient(cx, cy, r * 0.6, cx, cy, r);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.2)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.restore();
+
+    // Segment border
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Text
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(startAngle + sliceAngle / 2);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    const fontSize = Math.max(10, Math.min(15, r * 0.1, (sliceAngle * r * 0.4) / (game.name.length * 0.55)));
+    ctx.font = `700 ${fontSize}px 'Nunito', sans-serif`;
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 3;
+    ctx.fillText(game.name, r - 14, 0);
+    ctx.restore();
+  });
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Peg marks
+  if (active.length > 1) {
+    active.forEach((_, i) => {
+      const a = angle + i * sliceAngle;
+      const px = cx + Math.cos(a) * (r - 2);
+      const py = cy + Math.sin(a) * (r - 2);
+      ctx.beginPath();
+      ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fill();
+    });
+  }
+
+  drawHub(cx, cy, r);
+}
+
+function drawHub(cx, cy, r) {
+  // Center hub
+  const hubR = r * 0.12;
+  const hubGrad = ctx.createRadialGradient(cx - hubR * 0.3, cy - hubR * 0.3, 0, cx, cy, hubR);
+  hubGrad.addColorStop(0, '#ffd97d');
+  hubGrad.addColorStop(1, '#e8a820');
+  ctx.beginPath();
+  ctx.arc(cx, cy, hubR, 0, Math.PI * 2);
+  ctx.fillStyle = hubGrad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Inner circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, hubR * 0.5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fill();
+}
+
+// ─── Spin Logic ───
+function spin() {
+  const active = getActiveGames();
+  if (active.length === 0 || spinning) return;
+
+  initAudio();
+  spinning = true;
+  spinBtn.disabled = true;
+
+  const totalRotation = Math.PI * 2 * (5 + Math.random() * 5) + Math.random() * Math.PI * 2;
+  const targetAngle = currentAngle + totalRotation;
+  const duration = 4000 + Math.random() * 2000;
+  const startTime = performance.now();
+  const startAngle = currentAngle;
+
+  const sliceAngle = (Math.PI * 2) / active.length;
+  let lastSegment = -1;
+
+  function easeOutQuart(t) {
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const eased = easeOutQuart(t);
+
+    currentAngle = startAngle + totalRotation * eased;
+    drawWheel(currentAngle);
+
+    // Tick detection: which segment is at the top (pointer position = -PI/2)
+    const pointerAngle = (-Math.PI / 2 - currentAngle % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2);
+    const currentSegment = Math.floor(pointerAngle / sliceAngle) % active.length;
+
+    if (currentSegment !== lastSegment && lastSegment !== -1) {
+      playTick();
+      pointer.classList.add('tick');
+      setTimeout(() => pointer.classList.remove('tick'), 60);
+    }
+    lastSegment = currentSegment;
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      spinning = false;
+      spinBtn.disabled = false;
+      const winnerIndex = currentSegment;
+      const winner = active[winnerIndex];
+      showResult(winner);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// ─── Result ───
+function showResult(game) {
+  playVictory();
+  resultName.textContent = game.name;
+  if (game.url) {
+    resultLink.href = game.url;
+    resultLink.style.display = '';
+  } else {
+    resultLink.style.display = 'none';
+  }
+  resultOverlay.classList.add('visible');
+  launchConfetti();
+}
+
+function hideResult() {
+  resultOverlay.classList.remove('visible');
+}
+
+resultClose.addEventListener('click', hideResult);
+resultRespin.addEventListener('click', () => {
+  hideResult();
+  setTimeout(spin, 300);
+});
+
+// ─── Confetti ───
+let confettiParticles = [];
+let confettiAnim = null;
+
+function resizeConfetti() {
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+}
+
+function launchConfetti() {
+  resizeConfetti();
+  confettiParticles = [];
+  const colors = ['#ff6b6b','#ffc857','#4ecdc4','#a06cd5','#ff9f43','#6ec6ff','#ff78ae','#7bed9f','#ffd93d','#fd79a8'];
+
+  for (let i = 0; i < 150; i++) {
+    confettiParticles.push({
+      x: window.innerWidth / 2 + (Math.random() - 0.5) * 200,
+      y: window.innerHeight / 2 - 100,
+      vx: (Math.random() - 0.5) * 16,
+      vy: -(Math.random() * 12 + 4),
+      w: Math.random() * 10 + 4,
+      h: Math.random() * 6 + 3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * 360,
+      rotSpeed: (Math.random() - 0.5) * 12,
+      gravity: 0.18 + Math.random() * 0.08,
+      opacity: 1,
+      decay: 0.003 + Math.random() * 0.004,
+    });
+  }
+
+  if (confettiAnim) cancelAnimationFrame(confettiAnim);
+  animateConfetti();
+}
+
+function animateConfetti() {
+  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  let alive = false;
+
+  confettiParticles.forEach(p => {
+    if (p.opacity <= 0) return;
+    alive = true;
+    p.x += p.vx;
+    p.vy += p.gravity;
+    p.y += p.vy;
+    p.vx *= 0.99;
+    p.rotation += p.rotSpeed;
+    p.opacity -= p.decay;
+
+    confettiCtx.save();
+    confettiCtx.translate(p.x, p.y);
+    confettiCtx.rotate((p.rotation * Math.PI) / 180);
+    confettiCtx.globalAlpha = Math.max(0, p.opacity);
+    confettiCtx.fillStyle = p.color;
+    confettiCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    confettiCtx.restore();
+  });
+
+  if (alive) {
+    confettiAnim = requestAnimationFrame(animateConfetti);
+  } else {
+    confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  }
+}
+
+// ─── Game List UI ───
+function renderGameList() {
+  const active = getActiveGames();
+  noGamesMsg.style.display = active.length === 0 ? '' : 'none';
+  document.getElementById('wheel-stage').style.display = active.length === 0 ? 'none' : '';
+  spinBtn.style.display = active.length === 0 ? 'none' : '';
+
+  gameListEl.innerHTML = '';
+  games.forEach((game, idx) => {
+    const li = document.createElement('li');
+    li.className = 'game-item' + (game.enabled ? '' : ' disabled');
+
+    const dot = document.createElement('span');
+    dot.className = 'color-dot';
+    // Find this game's index among active games for color matching
+    const activeIdx = active.indexOf(game);
+    dot.style.background = game.enabled && activeIdx >= 0
+      ? SEGMENT_COLORS[activeIdx % SEGMENT_COLORS.length]
+      : 'var(--text-muted)';
+
+    const label = document.createElement('label');
+    label.textContent = game.name;
+    label.setAttribute('for', `toggle-${idx}`);
+
+    const toggle = document.createElement('div');
+    toggle.className = 'toggle';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = game.enabled;
+    input.id = `toggle-${idx}`;
+    input.addEventListener('change', () => {
+      game.enabled = input.checked;
+      saveGames();
+      renderGameList();
+      resizeCanvas();
+      drawWheel(currentAngle);
+    });
+    const slider = document.createElement('span');
+    slider.className = 'slider';
+    toggle.appendChild(input);
+    toggle.appendChild(slider);
+
+    li.appendChild(dot);
+    li.appendChild(label);
+    li.appendChild(toggle);
+
+    if (game.custom) {
+      const del = document.createElement('button');
+      del.className = 'delete-btn';
+      del.textContent = '\u00d7';
+      del.title = 'Remove game';
+      del.addEventListener('click', () => {
+        games.splice(idx, 1);
+        saveGames();
+        renderGameList();
+        resizeCanvas();
+        drawWheel(currentAngle);
+      });
+      li.appendChild(del);
+    }
+
+    gameListEl.appendChild(li);
+  });
+}
+
+// ─── Add Game ───
+document.getElementById('add-btn').addEventListener('click', () => {
+  const nameInput = document.getElementById('input-name');
+  const urlInput = document.getElementById('input-url');
+  const name = nameInput.value.trim();
+  const url = urlInput.value.trim();
+  if (!name) { nameInput.focus(); return; }
+
+  games.push({ name, url: url || '', enabled: true, custom: true });
+  saveGames();
+  nameInput.value = '';
+  urlInput.value = '';
+  renderGameList();
+  resizeCanvas();
+  drawWheel(currentAngle);
+});
+
+document.getElementById('input-name').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('add-btn').click();
+});
+document.getElementById('input-url').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('add-btn').click();
+});
+
+// ─── Sidebar Mobile ───
+sidebarToggle.addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+  sidebarBackdrop.classList.toggle('visible');
+});
+sidebarBackdrop.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  sidebarBackdrop.classList.remove('visible');
+});
+
+// ─── Spin ───
+spinBtn.addEventListener('click', spin);
+
+// ─── Init ───
+loadGames();
+renderGameList();
+
+function init() {
+  resizeCanvas();
+  drawWheel(currentAngle);
+}
+
+init();
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  drawWheel(currentAngle);
+  resizeConfetti();
+});
+</script>
+</body>
+</html>
