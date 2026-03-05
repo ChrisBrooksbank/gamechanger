@@ -551,6 +551,220 @@ body::after {
   color: var(--text-secondary);
   margin-bottom: 0.3rem;
 }
+
+/* ─── Import CSV ─── */
+.btn-import-toggle {
+  background: var(--bg-card-hover) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border) !important;
+}
+.btn-import-toggle:hover { opacity: 0.85; color: var(--text-primary) !important; }
+
+.import-panel {
+  display: none;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg-deep);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-top: 0.25rem;
+}
+.import-panel.visible { display: flex; }
+
+.import-panel textarea {
+  font-family: 'Nunito', monospace;
+  font-size: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 88px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.import-panel textarea:focus { border-color: var(--accent-teal); }
+.import-panel textarea::placeholder { color: var(--text-muted); font-size: 0.78rem; }
+
+.import-panel .file-label {
+  font-size: 0.78rem;
+  color: var(--accent-teal);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  opacity: 0.8;
+}
+.import-panel .file-label:hover { opacity: 1; }
+.import-panel input[type="file"] { display: none; }
+
+.import-btn-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.import-btn-row button {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-do-import { background: var(--accent-teal); color: var(--bg-deep); }
+.btn-cancel-import { background: var(--bg-card-hover); color: var(--text-secondary); }
+.import-btn-row button:hover { opacity: 0.85; }
+
+.import-msg {
+  font-size: 0.78rem;
+  min-height: 1em;
+}
+
+/* ─── Browse Game Library ─── */
+.library-section {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.library-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  width: 100%;
+  transition: color 0.2s;
+}
+.library-toggle-btn:hover { color: var(--text-primary); }
+.library-toggle-btn .chevron { display: inline-block; transition: transform 0.25s; font-style: normal; font-size: 0.7em; }
+.library-toggle-btn.open .chevron { transform: rotate(90deg); }
+
+.library-body {
+  display: none;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+.library-body.visible { display: flex; }
+
+.pack-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.pack-tab {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.pack-tab:hover { color: var(--text-secondary); border-color: var(--text-muted); }
+.pack-tab.active {
+  background: var(--accent-teal);
+  border-color: var(--accent-teal);
+  color: var(--bg-deep);
+}
+
+.library-list {
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.library-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.library-item:not(.already-added):hover { background: var(--bg-card-hover); }
+.library-item.already-added { opacity: 0.4; }
+
+.library-item input[type="checkbox"] {
+  accent-color: var(--accent-teal);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.library-item.already-added input[type="checkbox"] { cursor: default; }
+
+.library-item label {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+.library-item.already-added label { cursor: default; }
+
+.library-item .lib-link {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-decoration: none;
+  transition: color 0.15s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.library-item .lib-link:hover { color: var(--accent-teal); }
+
+.btn-add-selected {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent-teal);
+  color: var(--bg-deep);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-add-selected:hover { opacity: 0.85; }
+
+/* ─── Reset button ─── */
+.btn-reset {
+  width: 100%;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.45rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.btn-reset:hover {
+  color: var(--accent-coral);
+  border-color: var(--accent-coral);
+  background: rgba(255, 107, 107, 0.08);
+}
 </style>
 </head>
 <body>
@@ -578,12 +792,38 @@ body::after {
       <input type="text" id="input-name" placeholder="Game name" maxlength="40">
       <input type="url" id="input-url" placeholder="URL (optional)">
       <button id="add-btn">+ Add Game</button>
+      <div style="display:flex;gap:0.5rem;">
+        <button id="import-toggle-btn" class="btn-import-toggle" style="flex:1">&#8679; Import CSV</button>
+        <button id="export-btn" class="btn-import-toggle" title="Export game list as CSV">&#8681; Export</button>
+      </div>
+    </div>
+    <div class="import-panel" id="import-panel">
+      <textarea id="import-textarea" placeholder="Paste CSV — one game per line:&#10;Game Name&#10;Game Name,https://url.com&#10;# Lines starting with # are skipped"></textarea>
+      <label class="file-label" for="import-file">&#128193; Or pick a .csv / .txt file&hellip;</label>
+      <input type="file" id="import-file" accept=".csv,.txt">
+      <div class="import-btn-row">
+        <button class="btn-do-import" id="import-do-btn">Import</button>
+        <button class="btn-cancel-import" id="import-cancel-btn">Cancel</button>
+      </div>
+      <div class="import-msg" id="import-msg"></div>
+    </div>
+    <div class="library-section">
+      <button class="library-toggle-btn" id="library-toggle-btn">
+        <em class="chevron">&#9654;</em> Expansion Packs
+      </button>
+      <div class="library-body" id="library-body">
+        <div class="pack-tabs" id="pack-tabs"></div>
+        <ul class="library-list" id="library-list"></ul>
+        <button class="btn-add-selected" id="library-add-btn">Add Selected</button>
+      </div>
+    </div>
+    <div style="padding-top:0.75rem;margin-top:auto;">
+      <button id="reset-btn" class="btn-reset">&#8635; Reset to defaults</button>
     </div>
   </aside>
+  <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle game list">&#9776;</button>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 </div>
-
-<button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle game list">&#9776;</button>
-<div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
 <div class="result-overlay" id="result-overlay">
   <div class="result-card">
@@ -613,6 +853,65 @@ const DEFAULT_GAMES = [
   { name: 'Heardle', url: 'https://songquiz.io/heardle', enabled: true, custom: false },
   { name: 'Murdle', url: 'https://murdle.com/', enabled: true, custom: false },
   { name: 'BBC News Quiz', url: 'https://www.bbc.co.uk/news/topics/crxd18199v9t', enabled: true, custom: false },
+];
+
+// ─── Expansion Packs ───
+const GAME_LIBRARY = [
+  {
+    pack: 'Geography',
+    games: [
+      { name: 'GeoGuessr',  url: 'https://www.geoguessr.com/' },
+      { name: 'Worldle',    url: 'https://worldle.teuteuf.fr/' },
+      { name: 'Globle',     url: 'https://globle-game.com/' },
+      { name: 'Flagle',     url: 'https://flagle.io/' },
+      { name: 'Tradle',     url: 'https://oec.world/en/games/tradle' },
+      { name: 'Geotastic',  url: 'https://geotastic.net/' },
+      { name: 'TimeGuessr', url: 'https://timeguessr.com/' },
+    ],
+  },
+  {
+    pack: 'Word & Trivia',
+    games: [
+      { name: 'Wordle',             url: 'https://www.nytimes.com/games/wordle/index.html' },
+      { name: 'Connections',        url: 'https://www.nytimes.com/games/connections' },
+      { name: 'Semantle',           url: 'https://semantle.com/' },
+      { name: 'Redactle',           url: 'https://redactle-unlimited.com/' },
+      { name: 'Factle',             url: 'https://factle.app/' },
+      { name: 'Murdle',             url: 'https://murdle.com/' },
+      { name: 'Typeracer',          url: 'https://play.typeracer.com/' },
+      { name: 'Sporcle',            url: 'https://www.sporcle.com/' },
+      { name: 'BBC News Quiz',      url: 'https://www.bbc.co.uk/news/topics/crxd18199v9t' },
+      { name: 'Daily Dozen Trivia', url: 'https://dailydozentrivia.com/' },
+    ],
+  },
+  {
+    pack: 'Music',
+    games: [
+      { name: 'Heardle', url: 'https://songquiz.io/heardle' },
+      { name: 'Bandle',  url: 'https://bandle.app/' },
+    ],
+  },
+  {
+    pack: 'Films & Stars',
+    games: [
+      { name: 'Framed',    url: 'https://framed.wtf/' },
+      { name: 'Moviedle',  url: 'https://moviedle.app/' },
+      { name: 'Actorle',   url: 'https://actorle.com/' },
+      { name: 'Poeltl',    url: 'https://poeltl.dunk.town/' },
+    ],
+  },
+  {
+    pack: 'Party',
+    games: [
+      { name: 'Skribbl',          url: 'https://skribbl.io/' },
+      { name: 'Gartic Phone',     url: 'https://garticphone.com/' },
+      { name: 'Codenames',        url: 'https://codenames.game/' },
+      { name: 'Spyfall',          url: 'https://www.spyfall.app/play' },
+      { name: 'Scattergories',    url: 'https://swellgarfo.com/scattergories/' },
+      { name: 'Kahoot',           url: 'https://kahoot.it/' },
+      { name: 'Board Game Arena', url: 'https://boardgamearena.com/' },
+    ],
+  },
 ];
 
 const SEGMENT_COLORS = [
@@ -651,7 +950,14 @@ const confettiCtx = confettiCanvas.getContext('2d');
 function loadGames() {
   const stored = localStorage.getItem('gamechanger_games');
   if (stored) {
-    try { games = JSON.parse(stored); return; } catch(e) {}
+    try {
+      const parsed = JSON.parse(stored);
+      const defaultNames = new Set(DEFAULT_GAMES.map(g => g.name.toLowerCase()));
+      // Remove built-in games that are no longer in DEFAULT_GAMES (cleanup migration)
+      games = parsed.filter(g => g.custom || defaultNames.has(g.name.toLowerCase()));
+      saveGames();
+      return;
+    } catch(e) {}
   }
   games = DEFAULT_GAMES.map(g => ({ ...g }));
   saveGames();
@@ -1044,6 +1350,146 @@ function renderGameList() {
   });
 }
 
+// ─── CSV Import ───
+document.getElementById('import-toggle-btn').addEventListener('click', () => {
+  const panel = document.getElementById('import-panel');
+  panel.classList.toggle('visible');
+  document.getElementById('import-msg').textContent = '';
+});
+
+document.getElementById('import-cancel-btn').addEventListener('click', () => {
+  document.getElementById('import-panel').classList.remove('visible');
+  document.getElementById('import-textarea').value = '';
+  document.getElementById('import-msg').textContent = '';
+});
+
+document.getElementById('import-file').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => { document.getElementById('import-textarea').value = ev.target.result; };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function parseAndImportCSV(text) {
+  let added = 0;
+  text.split('\n').forEach(line => {
+    line = line.trim();
+    if (!line || line.startsWith('#')) return;
+    const commaIdx = line.indexOf(',');
+    const name = (commaIdx >= 0 ? line.slice(0, commaIdx) : line).trim();
+    const url = (commaIdx >= 0 ? line.slice(commaIdx + 1) : '').trim();
+    if (!name) return;
+    if (games.some(g => g.name.toLowerCase() === name.toLowerCase())) return;
+    games.push({ name, url, enabled: true, custom: true });
+    added++;
+  });
+  return added;
+}
+
+document.getElementById('import-do-btn').addEventListener('click', () => {
+  const text = document.getElementById('import-textarea').value;
+  const added = parseAndImportCSV(text);
+  const msg = document.getElementById('import-msg');
+  if (added > 0) {
+    saveGames();
+    renderGameList();
+    renderLibraryList();
+    resizeCanvas();
+    drawWheel(currentAngle);
+    msg.textContent = `Added ${added} game${added !== 1 ? 's' : ''}`;
+    msg.style.color = 'var(--accent-teal)';
+    document.getElementById('import-textarea').value = '';
+  } else {
+    msg.textContent = 'No new games found';
+    msg.style.color = 'var(--text-muted)';
+  }
+});
+
+// ─── Expansion Packs ───
+let activePack = 0;
+
+function renderLibraryList() {
+  const tabsEl = document.getElementById('pack-tabs');
+  const list = document.getElementById('library-list');
+
+  // Render tabs
+  tabsEl.innerHTML = '';
+  GAME_LIBRARY.forEach((pack, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'pack-tab' + (i === activePack ? ' active' : '');
+    btn.textContent = pack.pack;
+    btn.addEventListener('click', () => { activePack = i; renderLibraryList(); });
+    tabsEl.appendChild(btn);
+  });
+
+  // Render games for active pack
+  list.innerHTML = '';
+  const packGames = GAME_LIBRARY[activePack].games;
+  packGames.forEach((libGame, i) => {
+    const alreadyAdded = games.some(g => g.name.toLowerCase() === libGame.name.toLowerCase());
+    const li = document.createElement('li');
+    li.className = 'library-item' + (alreadyAdded ? ' already-added' : '');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = `lib-cb-${i}`;
+    cb.checked = alreadyAdded;
+    cb.disabled = alreadyAdded;
+
+    const label = document.createElement('label');
+    label.htmlFor = `lib-cb-${i}`;
+    label.textContent = libGame.name;
+
+    li.appendChild(cb);
+    li.appendChild(label);
+
+    if (libGame.url) {
+      const link = document.createElement('a');
+      link.href = libGame.url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.className = 'lib-link';
+      link.title = libGame.url;
+      link.textContent = '\u2197';
+      link.addEventListener('click', e => e.stopPropagation());
+      li.appendChild(link);
+    }
+
+    list.appendChild(li);
+  });
+}
+
+document.getElementById('library-toggle-btn').addEventListener('click', () => {
+  const btn = document.getElementById('library-toggle-btn');
+  const body = document.getElementById('library-body');
+  btn.classList.toggle('open');
+  body.classList.toggle('visible');
+  if (body.classList.contains('visible')) renderLibraryList();
+});
+
+document.getElementById('library-add-btn').addEventListener('click', () => {
+  const checkboxes = document.getElementById('library-list')
+    .querySelectorAll('input[type="checkbox"]:checked:not(:disabled)');
+  let added = 0;
+  checkboxes.forEach(cb => {
+    const idx = parseInt(cb.id.replace('lib-cb-', ''));
+    const libGame = GAME_LIBRARY[activePack].games[idx];
+    if (!games.some(g => g.name.toLowerCase() === libGame.name.toLowerCase())) {
+      games.push({ name: libGame.name, url: libGame.url, enabled: true, custom: true });
+      added++;
+    }
+  });
+  if (added > 0) {
+    saveGames();
+    renderGameList();
+    renderLibraryList();
+    resizeCanvas();
+    drawWheel(currentAngle);
+  }
+});
+
 // ─── Add Game ───
 document.getElementById('add-btn').addEventListener('click', () => {
   const nameInput = document.getElementById('input-name');
@@ -1066,6 +1512,28 @@ document.getElementById('input-name').addEventListener('keydown', (e) => {
 });
 document.getElementById('input-url').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') document.getElementById('add-btn').click();
+});
+
+// ─── Export CSV ───
+document.getElementById('export-btn').addEventListener('click', () => {
+  const csv = games.map(g => g.url ? `${g.name},${g.url}` : g.name).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gamechanger-games.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ─── Reset to Defaults ───
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (!confirm('Reset to default games? This will remove all custom and library games.')) return;
+  games = DEFAULT_GAMES.map(g => ({ ...g }));
+  saveGames();
+  renderGameList();
+  renderLibraryList();
+  resizeCanvas();
+  drawWheel(currentAngle);
 });
 
 // ─── Sidebar Mobile ───
