@@ -115,39 +115,26 @@ body::after {
   width: 100%;
   height: 100%;
   display: block;
-  filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5))
+          drop-shadow(0 2px 8px rgba(0,0,0,0.8));
 }
 
 /* Pointer */
 .pointer {
   position: absolute;
-  top: -8px;
+  top: -16px;
   left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 18px solid transparent;
-  border-right: 18px solid transparent;
-  border-top: 36px solid var(--accent-gold);
-  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+  transform: translateX(-50%) rotate(0deg);
+  transform-origin: 50% 0%;
   z-index: 10;
+  line-height: 0;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.65));
   transition: filter 0.1s;
-}
-.pointer::after {
-  content: '';
-  position: absolute;
-  top: -38px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--accent-gold);
-  box-shadow: 0 0 8px var(--shadow-glow);
 }
 
 .pointer.tick {
-  filter: drop-shadow(0 3px 12px rgba(255,200,87,0.8));
+  filter: drop-shadow(0 4px 14px rgba(255,200,87,0.9))
+          drop-shadow(0 0 8px rgba(255,200,87,0.55));
 }
 
 /* ─── Spin Button ─── */
@@ -774,7 +761,62 @@ body::after {
     <h1 class="title">GameChanger<span>Spin the wheel, pick a game</span></h1>
     <div class="wheel-stage" id="wheel-stage">
       <canvas class="wheel-canvas" id="wheel-canvas"></canvas>
-      <div class="pointer" id="pointer"></div>
+      <div class="pointer" id="pointer">
+        <svg width="40" height="54" viewBox="0 0 40 54" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- Metallic L→R gradient for triangle body -->
+            <linearGradient id="ptr-body" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stop-color="#9a6200"/>
+              <stop offset="20%"  stop-color="#ffd060"/>
+              <stop offset="48%"  stop-color="#ffe899"/>
+              <stop offset="78%"  stop-color="#ffb820"/>
+              <stop offset="100%" stop-color="#8a5500"/>
+            </linearGradient>
+            <!-- Top-to-tip sheen (vertical) -->
+            <linearGradient id="ptr-sheen" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="rgba(255,255,255,0.52)"/>
+              <stop offset="30%"  stop-color="rgba(255,255,255,0.10)"/>
+              <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+            </linearGradient>
+            <!-- Pin ball & bar gradient -->
+            <radialGradient id="ptr-pin" cx="36%" cy="32%" r="62%">
+              <stop offset="0%"   stop-color="#fff5c0"/>
+              <stop offset="50%"  stop-color="#ffc857"/>
+              <stop offset="100%" stop-color="#9a6800"/>
+            </radialGradient>
+          </defs>
+
+          <!-- === Triangle body === -->
+          <!-- Base metallic fill -->
+          <path d="M 3 17 L 37 17 L 20 51 Z" fill="url(#ptr-body)"/>
+          <!-- Vertical sheen overlay -->
+          <path d="M 3 17 L 37 17 L 20 51 Z" fill="url(#ptr-sheen)"/>
+          <!-- Left face catchlight -->
+          <path d="M 3 17 L 13 17 L 20 51 Z" fill="rgba(255,255,255,0.13)"/>
+          <!-- Right face shadow -->
+          <path d="M 27 17 L 37 17 L 20 51 Z" fill="rgba(0,0,0,0.11)"/>
+          <!-- Bottom tip glint -->
+          <path d="M 15 46 L 20 51 L 25 46 Z" fill="rgba(255,255,255,0.28)"/>
+          <!-- Thin dark bevel on left edge -->
+          <line x1="3" y1="17" x2="20" y2="51" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>
+          <!-- Thin light bevel on right edge -->
+          <line x1="20" y1="51" x2="37" y2="17" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
+
+          <!-- === Flat mounting bar across the top === -->
+          <rect x="1" y="13" width="38" height="6" rx="3" fill="url(#ptr-pin)"/>
+          <!-- Bar highlight ridge -->
+          <rect x="3" y="13.5" width="34" height="2" rx="1" fill="rgba(255,255,255,0.45)"/>
+          <!-- Bar bottom shadow line -->
+          <rect x="1" y="18" width="38" height="1.5" rx="0.75" fill="rgba(0,0,0,0.22)"/>
+
+          <!-- === Pin / pivot ball === -->
+          <circle cx="20" cy="8" r="8" fill="url(#ptr-pin)"/>
+          <!-- Rim around ball -->
+          <circle cx="20" cy="8" r="8" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>
+          <!-- Specular highlight on ball -->
+          <ellipse cx="17" cy="5" rx="3" ry="2.2" fill="rgba(255,255,255,0.55)"/>
+        </svg>
+      </div>
     </div>
     <button class="spin-btn" id="spin-btn">SPIN</button>
     <div class="no-games" id="no-games" style="display:none">
@@ -977,19 +1019,38 @@ function initAudio() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
 
-function playTick() {
+function playTick(omega) {
   if (!audioCtx) return;
+  // Fast spin = rapid quiet high ticks; slow spin = louder lower ticks
+  const speed = Math.min(1, (omega || 0.005) / 0.03);
+  const volume = 0.07 + (1 - speed) * 0.18;
+  const startFreq = 1200 + speed * 900;
+  const endFreq = 400 + speed * 300;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.type = 'triangle';
-  osc.frequency.setValueAtTime(1800, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.04);
-  gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+  osc.frequency.setValueAtTime(startFreq, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(endFreq, audioCtx.currentTime + 0.04);
+  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
   osc.start(audioCtx.currentTime);
   osc.stop(audioCtx.currentTime + 0.06);
+}
+
+function triggerPointerDeflect(omega) {
+  const speed = Math.min(1, (omega || 0.005) / 0.03);
+  const deg = 5 + speed * 18; // 5° slow, 23° fast
+  // Remove transition so the snap is instant
+  pointer.style.transition = 'filter 0.1s';
+  pointer.style.transform = `translateX(-50%) rotate(${deg}deg)`;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      pointer.style.transition = 'transform 130ms cubic-bezier(0.3, 2.5, 0.6, 1), filter 0.1s';
+      pointer.style.transform = 'translateX(-50%) rotate(0deg)';
+    });
+  });
 }
 
 function playVictory() {
@@ -1073,6 +1134,25 @@ function drawWheel(angle) {
     ctx.fill();
     ctx.restore();
 
+    // Segment gloss highlight
+    const midAngle = startAngle + sliceAngle / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.clip();
+    const gloss = ctx.createRadialGradient(
+      cx, cy, r * 0.55,
+      cx + Math.cos(midAngle) * r * 0.3, cy + Math.sin(midAngle) * r * 0.3, r * 0.9
+    );
+    gloss.addColorStop(0, 'rgba(255,255,255,0)');
+    gloss.addColorStop(0.5, 'rgba(255,255,255,0.08)');
+    gloss.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gloss;
+    ctx.fill();
+    ctx.restore();
+
     // Segment border
     ctx.beginPath();
     ctx.moveTo(cx, cy);
@@ -1088,56 +1168,164 @@ function drawWheel(angle) {
     ctx.rotate(startAngle + sliceAngle / 2);
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    const fontSize = Math.max(10, Math.min(15, r * 0.1, (sliceAngle * r * 0.4) / (game.name.length * 0.55)));
-    ctx.font = `700 ${fontSize}px 'Nunito', sans-serif`;
-    ctx.fillStyle = '#fff';
-    ctx.shadowColor = 'rgba(0,0,0,0.4)';
-    ctx.shadowBlur = 3;
-    ctx.fillText(game.name, r - 14, 0);
+    const fontSize = Math.max(11, Math.min(20, r * 0.13, (sliceAngle * r * 0.44) / (game.name.length * 0.52)));
+    ctx.font = `800 ${fontSize}px 'Nunito', sans-serif`;
+    const tx = r - 14;
+    // Hard offset shadow (simulates physical raised letters)
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillText(game.name, tx + 1.5, 1.5);
+    // Soft ambient shadow for depth
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 4;
+    // Main white text
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(game.name, tx, 0);
+    ctx.shadowBlur = 0;
+    // Thin dark outline for crispness
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+    ctx.lineWidth = 0.6;
+    ctx.strokeText(game.name, tx, 0);
     ctx.restore();
   });
 
-  // Outer ring
+  // Metallic rim
+  const rimWidth = 9;
+  ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  ctx.lineWidth = 3;
+  const rimGrad = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
+  rimGrad.addColorStop(0, '#888');
+  rimGrad.addColorStop(0.25, '#e0e0e0');
+  rimGrad.addColorStop(0.5, '#b8b8b8');
+  rimGrad.addColorStop(0.75, '#e0e0e0');
+  rimGrad.addColorStop(1, '#888');
+  ctx.strokeStyle = rimGrad;
+  ctx.lineWidth = rimWidth;
   ctx.stroke();
+  // Inner shadow on rim
+  ctx.beginPath();
+  ctx.arc(cx, cy, r - rimWidth * 0.5, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+  ctx.lineWidth = rimWidth * 0.45;
+  ctx.stroke();
+  ctx.restore();
 
-  // Peg marks
+  // Domed metal studs at segment boundaries
   if (active.length > 1) {
     active.forEach((_, i) => {
       const a = angle + i * sliceAngle;
-      const px = cx + Math.cos(a) * (r - 2);
-      const py = cy + Math.sin(a) * (r - 2);
+      const px = cx + Math.cos(a) * (r - 4.5);
+      const py = cy + Math.sin(a) * (r - 4.5);
+      // Shadow
       ctx.beginPath();
-      ctx.arc(px, py, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.arc(px + 1, py + 1, 5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fill();
+      // Domed stud with radial gradient
+      const studGrad = ctx.createRadialGradient(px - 1.8, py - 1.8, 0, px, py, 5);
+      studGrad.addColorStop(0, '#ffffff');
+      studGrad.addColorStop(0.35, '#d8d8d8');
+      studGrad.addColorStop(1, '#666666');
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.fillStyle = studGrad;
       ctx.fill();
     });
   }
+
+  // Spokes overlay — subtle metallic detail on top of segments
+  const numSpokes = 8;
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  for (let i = 0; i < numSpokes; i++) {
+    const a = angle + (i / numSpokes) * Math.PI * 2;
+    const innerR = r * 0.16;
+    const sx = cx + Math.cos(a) * innerR;
+    const sy = cy + Math.sin(a) * innerR;
+    const ex = cx + Math.cos(a) * (r - rimWidth - 1);
+    const ey = cy + Math.sin(a) * (r - rimWidth - 1);
+    const spokeGrad = ctx.createLinearGradient(sx, sy, ex, ey);
+    spokeGrad.addColorStop(0, 'rgba(255,255,255,0.9)');
+    spokeGrad.addColorStop(1, 'rgba(200,200,200,0.3)');
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
+    ctx.strokeStyle = spokeGrad;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  ctx.restore();
 
   drawHub(cx, cy, r);
 }
 
 function drawHub(cx, cy, r) {
-  // Center hub
-  const hubR = r * 0.12;
-  const hubGrad = ctx.createRadialGradient(cx - hubR * 0.3, cy - hubR * 0.3, 0, cx, cy, hubR);
-  hubGrad.addColorStop(0, '#ffd97d');
-  hubGrad.addColorStop(1, '#e8a820');
+  const hubR = r * 0.14;
+
+  // Outer gunmetal ring
+  const gunGrad = ctx.createRadialGradient(cx - hubR * 0.2, cy - hubR * 0.25, 0, cx, cy, hubR);
+  gunGrad.addColorStop(0, '#585268');
+  gunGrad.addColorStop(0.55, '#2e2840');
+  gunGrad.addColorStop(1, '#1a1528');
   ctx.beginPath();
   ctx.arc(cx, cy, hubR, 0, Math.PI * 2);
-  ctx.fillStyle = hubGrad;
+  ctx.fillStyle = gunGrad;
   ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-  ctx.lineWidth = 2;
-  ctx.stroke();
 
-  // Inner circle
+  // 4 bolt/screw marks in the gunmetal ring
+  const boltR = hubR * 0.87;
+  const boltSize = hubR * 0.14;
+  for (let i = 0; i < 4; i++) {
+    const ba = (i * Math.PI / 2);
+    const bx = cx + Math.cos(ba) * boltR;
+    const by = cy + Math.sin(ba) * boltR;
+    const boltGrad = ctx.createRadialGradient(bx - boltSize * 0.3, by - boltSize * 0.3, 0, bx, by, boltSize);
+    boltGrad.addColorStop(0, '#aaaaaa');
+    boltGrad.addColorStop(1, '#383838');
+    ctx.beginPath();
+    ctx.arc(bx, by, boltSize, 0, Math.PI * 2);
+    ctx.fillStyle = boltGrad;
+    ctx.fill();
+    // Slot line
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = boltSize * 0.45;
+    ctx.beginPath();
+    ctx.moveTo(bx - boltSize * 0.65, by);
+    ctx.lineTo(bx + boltSize * 0.65, by);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Chrome middle ring
+  const chromeR = hubR * 0.72;
+  const chromeGrad = ctx.createRadialGradient(cx - chromeR * 0.3, cy - chromeR * 0.3, 0, cx, cy, chromeR);
+  chromeGrad.addColorStop(0, '#f2f2f2');
+  chromeGrad.addColorStop(0.35, '#c8c8c8');
+  chromeGrad.addColorStop(0.75, '#909090');
+  chromeGrad.addColorStop(1, '#585858');
   ctx.beginPath();
-  ctx.arc(cx, cy, hubR * 0.5, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.arc(cx, cy, chromeR, 0, Math.PI * 2);
+  ctx.fillStyle = chromeGrad;
+  ctx.fill();
+
+  // Gold center cap
+  const goldR = hubR * 0.5;
+  const goldGrad = ctx.createRadialGradient(cx - goldR * 0.35, cy - goldR * 0.35, 0, cx, cy, goldR);
+  goldGrad.addColorStop(0, '#ffe49a');
+  goldGrad.addColorStop(0.45, '#ffc857');
+  goldGrad.addColorStop(1, '#d4920a');
+  ctx.beginPath();
+  ctx.arc(cx, cy, goldR, 0, Math.PI * 2);
+  ctx.fillStyle = goldGrad;
+  ctx.fill();
+
+  // Shine highlight on gold cap
+  ctx.beginPath();
+  ctx.arc(cx - goldR * 0.2, cy - goldR * 0.2, goldR * 0.42, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
   ctx.fill();
 }
 
@@ -1150,46 +1338,76 @@ function spin() {
   spinning = true;
   spinBtn.disabled = true;
 
-  const totalRotation = Math.PI * 2 * (5 + Math.random() * 5) + Math.random() * Math.PI * 2;
-  const targetAngle = currentAngle + totalRotation;
-  const duration = 4000 + Math.random() * 2000;
-  const startTime = performance.now();
-  const startAngle = currentAngle;
+  // Physics: angular velocity in radians per millisecond
+  let omega = 0.04 + Math.random() * 0.025;
+  const friction = 0.985; // multiplier per frame at 60fps
+  const stopThreshold = 0.0003;
 
   const sliceAngle = (Math.PI * 2) / active.length;
   let lastSegment = -1;
+  let lastTime = null;
 
-  function easeOutQuart(t) {
-    return 1 - Math.pow(1 - t, 4);
-  }
+  // Settle wobble state
+  let settling = false;
+  let settleStart = 0;
+  let settleAngle = 0;
+  let winner = null;
 
   function animate(now) {
-    const elapsed = now - startTime;
-    const t = Math.min(elapsed / duration, 1);
-    const eased = easeOutQuart(t);
+    if (lastTime === null) { lastTime = now; requestAnimationFrame(animate); return; }
+    const dt = now - lastTime;
+    lastTime = now;
 
-    currentAngle = startAngle + totalRotation * eased;
-    drawWheel(currentAngle);
+    if (!settling) {
+      // Apply friction normalized to 60fps
+      omega *= Math.pow(friction, dt / 16.67);
+      currentAngle += omega * dt;
+      drawWheel(currentAngle);
 
-    // Tick detection: which segment is at the top (pointer position = -PI/2)
-    const pointerAngle = (-Math.PI / 2 - currentAngle % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2);
-    const currentSegment = Math.floor(pointerAngle / sliceAngle) % active.length;
+      // Tick detection: which segment is under the pointer (top = -PI/2)
+      const pointerAngle = (-Math.PI / 2 - currentAngle % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2);
+      const currentSegment = Math.floor(pointerAngle / sliceAngle) % active.length;
 
-    if (currentSegment !== lastSegment && lastSegment !== -1) {
-      playTick();
-      pointer.classList.add('tick');
-      setTimeout(() => pointer.classList.remove('tick'), 60);
-    }
-    lastSegment = currentSegment;
+      if (currentSegment !== lastSegment && lastSegment !== -1) {
+        playTick(omega);
+        triggerPointerDeflect(omega);
+        pointer.classList.add('tick');
+        setTimeout(() => pointer.classList.remove('tick'), 60);
+      }
+      lastSegment = currentSegment;
 
-    if (t < 1) {
-      requestAnimationFrame(animate);
+      if (omega > stopThreshold) {
+        requestAnimationFrame(animate);
+      } else {
+        // Determine winner before wobble
+        const finalPointerAngle = (-Math.PI / 2 - currentAngle % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2);
+        const winnerIndex = Math.floor(finalPointerAngle / sliceAngle) % active.length;
+        winner = active[winnerIndex];
+        settling = true;
+        settleStart = now;
+        settleAngle = currentAngle;
+        requestAnimationFrame(animate);
+        // Show result after wobble settles
+        setTimeout(() => {
+          spinning = false;
+          spinBtn.disabled = false;
+          showResult(winner);
+        }, 650);
+      }
     } else {
-      spinning = false;
-      spinBtn.disabled = false;
-      const winnerIndex = currentSegment;
-      const winner = active[winnerIndex];
-      showResult(winner);
+      // Spring-settle wobble: sinusoidal decay simulating clapper weight
+      const elapsed = now - settleStart;
+      const duration = 500;
+      if (elapsed < duration) {
+        const t = elapsed / duration;
+        const decay = Math.exp(-t * 5.5);
+        const wobble = Math.sin(t * Math.PI * 4) * 0.018 * decay;
+        drawWheel(settleAngle + wobble);
+        requestAnimationFrame(animate);
+      } else {
+        currentAngle = settleAngle;
+        drawWheel(currentAngle);
+      }
     }
   }
 
