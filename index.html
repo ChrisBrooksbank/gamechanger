@@ -1019,38 +1019,55 @@ function initAudio() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
 
-function playTick(omega) {
+function playTick(omega, impulse = 0.5) {
   if (!audioCtx) return;
-  // Fast spin = rapid quiet high ticks; slow spin = louder lower ticks
-  const speed = Math.min(1, (omega || 0.005) / 0.03);
-  const volume = 0.07 + (1 - speed) * 0.18;
-  const startFreq = 1200 + speed * 900;
-  const endFreq = 400 + speed * 300;
+  const t = audioCtx.currentTime;
+  const vol = 0.1 + impulse * 0.22;
+
+  // Layer 1: woody body thud — low fixed-pitch resonance, no frequency sweep
+  // Real impacts don't sweep; they strike at one pitch and decay
+  const bodyFreq = 160 + impulse * 140;   // 160–300 Hz: wood/brass body range
+  const bodyDecay = 0.045 + impulse * 0.1; // 45–145 ms: longer ring on harder hits
   const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
+  const oscGain = audioCtx.createGain();
+  osc.connect(oscGain);
+  oscGain.connect(audioCtx.destination);
   osc.type = 'triangle';
-  osc.frequency.setValueAtTime(startFreq, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(endFreq, audioCtx.currentTime + 0.04);
-  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
-  osc.start(audioCtx.currentTime);
-  osc.stop(audioCtx.currentTime + 0.06);
+  osc.frequency.setValueAtTime(bodyFreq, t);
+  oscGain.gain.setValueAtTime(vol * 0.5, t);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, t + bodyDecay);
+  osc.start(t);
+  osc.stop(t + bodyDecay + 0.01);
+
+  // Layer 2: impact transient — bandpass-filtered noise burst for the "thwack"
+  // Gives the physical click character without pitched sweep
+  const clickDecay = 0.008 + impulse * 0.018; // 8–26 ms: very sharp transient
+  const bufLen = Math.ceil(audioCtx.sampleRate * (clickDecay + 0.01));
+  const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+
+  const noiseSrc = audioCtx.createBufferSource();
+  noiseSrc.buffer = buf;
+  const bpf = audioCtx.createBiquadFilter();
+  bpf.type = 'bandpass';
+  bpf.frequency.value = 400 + impulse * 250;  // 400–650 Hz: mid-range thwack, not shrill
+  bpf.Q.value = 1.8;
+  const noiseGain = audioCtx.createGain();
+  noiseSrc.connect(bpf);
+  bpf.connect(noiseGain);
+  noiseGain.connect(audioCtx.destination);
+  noiseGain.gain.setValueAtTime(vol * 0.9, t);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, t + clickDecay);
+  noiseSrc.start(t);
+  noiseSrc.stop(t + clickDecay + 0.005);
 }
 
-function triggerPointerDeflect(omega) {
-  const speed = Math.min(1, (omega || 0.005) / 0.03);
-  const deg = 5 + speed * 18; // 5° slow, 23° fast
-  // Remove transition so the snap is instant
-  pointer.style.transition = 'filter 0.1s';
-  pointer.style.transform = `translateX(-50%) rotate(${deg}deg)`;
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      pointer.style.transition = 'transform 130ms cubic-bezier(0.3, 2.5, 0.6, 1), filter 0.1s';
-      pointer.style.transform = 'translateX(-50%) rotate(0deg)';
-    });
-  });
+function didCross(prev, curr, target) {
+  // Detect if angle swept from prev→curr (forward/CW) crossed target, handles wraparound
+  const span = (curr - prev + Math.PI * 2) % (Math.PI * 2);
+  const dist = (target - prev + Math.PI * 2) % (Math.PI * 2);
+  return dist > 0 && dist <= span;
 }
 
 function playVictory() {
@@ -1339,13 +1356,17 @@ function spin() {
   spinBtn.disabled = true;
 
   // Physics: angular velocity in radians per millisecond
-  let omega = 0.04 + Math.random() * 0.025;
-  const friction = 0.985; // multiplier per frame at 60fps
+  // More energy = heavier feel; combined drag decelerates quickly at first then coasts
+  let omega = 0.055 + Math.random() * 0.03;
   const stopThreshold = 0.0003;
 
   const sliceAngle = (Math.PI * 2) / active.length;
-  let lastSegment = -1;
   let lastTime = null;
+  let prevAngle = currentAngle;
+
+  // Clapper pendulum state (JS-driven, not CSS transition)
+  let clapperAngle = 0;
+  let clapperOmega = 0;
 
   // Settle wobble state
   let settling = false;
@@ -1357,24 +1378,44 @@ function spin() {
     if (lastTime === null) { lastTime = now; requestAnimationFrame(animate); return; }
     const dt = now - lastTime;
     lastTime = now;
+    const dtN = dt / 16.67;
+
+    // Clapper pendulum physics — runs every frame including wobble phase
+    const clapperSpring = 0.00015;
+    const clapperDamp = Math.pow(0.88, dtN);
+    clapperOmega -= clapperSpring * clapperAngle * dt;
+    clapperOmega *= clapperDamp;
+    clapperAngle += clapperOmega * dt;
+    pointer.style.transform = `translateX(-50%) rotate(${clapperAngle * 180 / Math.PI}deg)`;
 
     if (!settling) {
-      // Apply friction normalized to 60fps
-      omega *= Math.pow(friction, dt / 16.67);
+      // Combined drag: quadratic air/pad resistance (dominant at high speed)
+      // + linear bearing friction (dominant at low speed) → heavy feel + long coast
+      const bearingFriction = 0.991;
+      const airDragK = 0.0006;
+      omega -= airDragK * omega * omega * dt;
+      omega *= Math.pow(bearingFriction, dtN);
+      prevAngle = currentAngle;
       currentAngle += omega * dt;
       drawWheel(currentAngle);
 
-      // Tick detection: which segment is under the pointer (top = -PI/2)
-      const pointerAngle = (-Math.PI / 2 - currentAngle % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2);
-      const currentSegment = Math.floor(pointerAngle / sliceAngle) % active.length;
-
-      if (currentSegment !== lastSegment && lastSegment !== -1) {
-        playTick(omega);
-        triggerPointerDeflect(omega);
-        pointer.classList.add('tick');
-        setTimeout(() => pointer.classList.remove('tick'), 60);
+      // Pin-crossing detection: segment boundaries at n*sliceAngle in wheel-space
+      // cross the top of the screen (3π/2 in [0,2π] canvas coords)
+      const N = active.length;
+      const TOP = Math.PI * 1.5;
+      for (let n = 0; n < N; n++) {
+        const prevPin = (prevAngle + n * sliceAngle) % (Math.PI * 2);
+        const currPin = (currentAngle + n * sliceAngle) % (Math.PI * 2);
+        if (didCross(prevPin, currPin, TOP)) {
+          const impulse = Math.min(omega / 0.065, 1);   // 0–1 normalized hit strength
+          clapperOmega += 0.025 + impulse * 0.09;        // knock clapper proportional to speed
+          omega -= impulse * 0.0001;                      // tiny reaction on wheel
+          playTick(omega, impulse);
+          pointer.classList.add('tick');
+          setTimeout(() => pointer.classList.remove('tick'), 60);
+          break; // at most one pin per frame
+        }
       }
-      lastSegment = currentSegment;
 
       if (omega > stopThreshold) {
         requestAnimationFrame(animate);
@@ -1395,7 +1436,7 @@ function spin() {
         }, 650);
       }
     } else {
-      // Spring-settle wobble: sinusoidal decay simulating clapper weight
+      // Spring-settle wobble: sinusoidal decay; clapper continues settling naturally above
       const elapsed = now - settleStart;
       const duration = 500;
       if (elapsed < duration) {
