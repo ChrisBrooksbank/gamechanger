@@ -1754,13 +1754,24 @@ function spin() {
   spinning = true;
   spinBtn.disabled = true;
 
-  // Physics: angular velocity in radians per millisecond
-  // More energy = heavier feel; combined drag decelerates quickly at first then coasts
-  let omega = 0.055 + Math.random() * 0.03;
-  currentAngle += Math.random() * Math.PI * 2; // randomise start so result isn't correlated to last spin
-  const stopThreshold = 0.0003;
-
   const sliceAngle = (Math.PI * 2) / active.length;
+
+  // Pick winner upfront for true uniform randomness
+  const winnerIndex = Math.floor(Math.random() * active.length);
+  const winner = active[winnerIndex];
+
+  // Target: pointer centered on winner segment with random offset within middle 60% of segment
+  const randomOffset = (0.2 + Math.random() * 0.6) * sliceAngle;
+  const targetPointerAngle = winnerIndex * sliceAngle + randomOffset;
+  // Invert the finalPointerAngle formula to get target currentAngle
+  const targetAngle = (-Math.PI / 2 - targetPointerAngle + Math.PI * 4) % (Math.PI * 2);
+  // Add enough full rotations for a dramatic spin (8–12 rotations)
+  const nSpins = 8 + Math.floor(Math.random() * 5);
+  const startAngle = currentAngle;
+  const totalTravel = (targetAngle - (startAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) + nSpins * Math.PI * 2;
+  const endAngle = startAngle + totalTravel;
+  const duration = 4000 + Math.random() * 1500; // 4.0–5.5 seconds
+
   let lastTime = null;
   let prevAngle = currentAngle;
 
@@ -1772,7 +1783,10 @@ function spin() {
   let settling = false;
   let settleStart = 0;
   let settleAngle = 0;
-  let winner = null;
+
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+  const spinStart = performance.now();
 
   function animate(now) {
     if (lastTime === null) { lastTime = now; requestAnimationFrame(animate); return; }
@@ -1789,14 +1803,10 @@ function spin() {
     pointer.style.transform = `translateX(-50%) rotate(${clapperAngle * 180 / Math.PI}deg)`;
 
     if (!settling) {
-      // Combined drag: quadratic air/pad resistance (dominant at high speed)
-      // + linear bearing friction (dominant at low speed) → heavy feel + long coast
-      const bearingFriction = 0.991;
-      const airDragK = 0.0006;
-      omega -= airDragK * omega * omega * dt;
-      omega *= Math.pow(bearingFriction, dtN);
+      const elapsed = now - spinStart;
+      const t = Math.min(elapsed / duration, 1);
       prevAngle = currentAngle;
-      currentAngle += omega * dt;
+      currentAngle = startAngle + totalTravel * easeOut(t);
       drawWheel(currentAngle);
 
       // Pin-crossing detection: segment boundaries at n*sliceAngle in wheel-space
@@ -1807,23 +1817,19 @@ function spin() {
         const prevPin = (prevAngle + n * sliceAngle) % (Math.PI * 2);
         const currPin = (currentAngle + n * sliceAngle) % (Math.PI * 2);
         if (didCross(prevPin, currPin, TOP)) {
-          const impulse = Math.min(omega / 0.065, 1);   // 0–1 normalized hit strength
-          clapperOmega += 0.025 + impulse * 0.09;        // knock clapper proportional to speed
-          omega -= impulse * 0.0001;                      // tiny reaction on wheel
-          playTick(omega, impulse);
+          const speed = (currentAngle - prevAngle) / dt; // radians per ms
+          const impulse = Math.min(speed / 0.065, 1);
+          clapperOmega += 0.025 + impulse * 0.09;
+          playTick(speed, impulse);
           pointer.classList.add('tick');
           setTimeout(() => pointer.classList.remove('tick'), 60);
           break; // at most one pin per frame
         }
       }
 
-      if (omega > stopThreshold) {
+      if (t < 1) {
         requestAnimationFrame(animate);
       } else {
-        // Determine winner before wobble
-        const finalPointerAngle = (-Math.PI / 2 - currentAngle % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2);
-        const winnerIndex = Math.floor(finalPointerAngle / sliceAngle) % active.length;
-        winner = active[winnerIndex];
         settling = true;
         settleStart = now;
         settleAngle = currentAngle;
