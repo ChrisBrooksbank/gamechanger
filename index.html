@@ -1757,6 +1757,7 @@ function spin() {
   // Physics: angular velocity in radians per millisecond
   // More energy = heavier feel; combined drag decelerates quickly at first then coasts
   let omega = 0.055 + Math.random() * 0.03;
+  currentAngle += Math.random() * Math.PI * 2; // randomise start so result isn't correlated to last spin
   const stopThreshold = 0.0003;
 
   const sliceAngle = (Math.PI * 2) / active.length;
