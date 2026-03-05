@@ -10,18 +10,25 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg-deep: #1a1025;
-  --bg-card: #261a35;
-  --bg-card-hover: #2f2240;
+  --bg-deep: #1a2e1a;
+  --bg-card: #1e3818;
+  --bg-card-hover: #243f1e;
   --accent-gold: #ffc857;
   --accent-coral: #ff6b6b;
   --accent-teal: #4ecdc4;
   --text-primary: #f0e6ff;
   --text-secondary: #b8a5d0;
   --text-muted: #7a6890;
-  --border: #3d2d52;
+  --border: #2e4a28;
   --shadow-glow: rgba(255, 200, 87, 0.25);
   --radius: 12px;
+  --wood-light: #c8902d;
+  --wood-dark: #8b5e1a;
+  --sign-bg: #6b1a1a;
+  --sign-border: #c8962d;
+  --sign-text-color: #ffd700;
+  --bulb-color: #fff8dc;
+  --bulb-glow: rgba(255, 220, 80, 0.8);
 }
 
 html { font-size: 16px; }
@@ -40,20 +47,21 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(78, 205, 196, 0.08), transparent),
-    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(255, 107, 107, 0.06), transparent),
-    radial-gradient(ellipse 50% 50% at 10% 60%, rgba(255, 200, 87, 0.05), transparent);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(200, 144, 45, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(255, 200, 87, 0.07), transparent),
+    radial-gradient(ellipse 50% 50% at 10% 60%, rgba(139, 94, 26, 0.08), transparent);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Subtle dot grid overlay */
+/* Subtle board-game square grid overlay */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-image:
+    repeating-linear-gradient(rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 40px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 40px);
   pointer-events: none;
   z-index: 0;
 }
@@ -76,30 +84,20 @@ body::after {
   position: relative;
 }
 
+/* ─── Title ─── */
 .title {
   font-family: 'Bangers', cursive;
-  font-size: clamp(2rem, 5vw, 3.2rem);
-  letter-spacing: 0.06em;
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  letter-spacing: 0.1em;
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
   background: linear-gradient(135deg, var(--accent-gold), var(--accent-coral));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 2px 8px rgba(255, 200, 87, 0.3));
+  filter: drop-shadow(0 2px 10px rgba(255, 200, 87, 0.4));
   user-select: none;
-}
-
-.title span {
-  display: block;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.32em;
-  font-weight: 600;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  -webkit-text-fill-color: var(--text-secondary);
-  filter: none;
-  margin-top: 0.2em;
+  line-height: 1;
 }
 
 /* ─── Wheel Container ─── */
@@ -107,7 +105,6 @@ body::after {
   position: relative;
   width: min(82vw, 480px);
   aspect-ratio: 1;
-  margin-bottom: 1.5rem;
   flex-shrink: 0;
 }
 
@@ -139,6 +136,7 @@ body::after {
 
 /* ─── Spin Button ─── */
 .spin-btn {
+  margin-top: 1rem;
   font-family: 'Bangers', cursive;
   font-size: 1.8rem;
   letter-spacing: 0.12em;
@@ -752,16 +750,375 @@ body::after {
   border-color: var(--accent-coral);
   background: rgba(255, 107, 107, 0.08);
 }
+
+/* ─── Wheel Area (sign + wheel) ─── */
+.wheel-area {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  justify-content: center;
+}
+
+/* ─── Carnival Sign ─── */
+.carnival-sign {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  /* Push sign down ~20% of wheel height to visually centre on the wheel disc, not the mount */
+  margin-top: clamp(60px, 14%, 96px);
+}
+
+.sign-board {
+  background: var(--sign-bg);
+  border: 5px solid var(--sign-border);
+  border-radius: 12px;
+  padding: 1rem 1.2rem 1.2rem;
+  text-align: center;
+  box-shadow:
+    0 0 0 2px rgba(80, 10, 10, 0.7),
+    0 0 36px rgba(200, 150, 45, 0.6),
+    0 16px 48px rgba(0, 0, 0, 0.75),
+    inset 0 0 24px rgba(0, 0, 0, 0.35);
+  width: 210px;
+  position: relative;
+}
+
+/* Decorative corner studs */
+.sign-board::before,
+.sign-board::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle at 35% 35%, #ffe080, #a06820);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(255,200,40,0.6);
+}
+.sign-board::before { top: 6px; left: 6px; box-shadow: 130px 0 0 0 #a06820, 130px 0 4px rgba(255,200,40,0.6); }
+.sign-board::after  { bottom: 6px; left: 6px; box-shadow: 130px 0 0 0 #a06820; }
+
+.sign-bulbs {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 0.25rem;
+  margin: 0.4rem 0;
+}
+
+.sign-bulb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--bulb-color);
+  box-shadow: 0 0 6px 3px var(--bulb-glow), 0 0 16px rgba(255, 200, 40, 0.65);
+  animation: bulbPulse 2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+.sign-bulb:nth-child(odd)  { animation-delay: 0s; }
+.sign-bulb:nth-child(even) { animation-delay: 1s; }
+
+@keyframes bulbPulse {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 6px 3px var(--bulb-glow), 0 0 16px rgba(255,200,40,0.65); }
+  50%       { opacity: 0.2; box-shadow: 0 0 2px 1px rgba(255,220,80,0.1); }
+}
+
+.sign-text {
+  font-family: 'Bangers', cursive;
+  font-size: 2rem;
+  letter-spacing: 0.05em;
+  color: var(--sign-text-color);
+  text-shadow:
+    0 2px 6px rgba(0,0,0,0.85),
+    0 0 22px rgba(255,215,0,0.55),
+    0 0 44px rgba(255,180,0,0.3);
+  line-height: 1.2;
+  padding: 0.4rem 0.2rem;
+  text-transform: uppercase;
+}
+
+.sign-post {
+  width: 13px;
+  height: 52px;
+  background: linear-gradient(to right, var(--wood-dark), var(--wood-light), var(--wood-dark));
+  border-radius: 3px;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.55);
+}
+
+.sign-post-base {
+  width: 70px;
+  height: 13px;
+  background: linear-gradient(to bottom, var(--wood-light), var(--wood-dark));
+  border-radius: 0 0 5px 5px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.55);
+}
+
+/* ─── Wheel Mount (A-frame stand) ─── */
+.wheel-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.wheel-mount {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(82vw, 480px);
+  margin-top: -8px;
+  position: relative;
+}
+
+.mount-crossbar {
+  width: 38%;
+  height: 11px;
+  background: linear-gradient(to bottom, #e0b04a, #a06820, #c8902d);
+  border-radius: 5px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+
+.mount-legs {
+  position: relative;
+  width: 66%;
+  height: 64px;
+  margin-top: -3px;
+}
+
+.mount-leg {
+  width: 11px;
+  height: 78px;
+  background: linear-gradient(to right, var(--wood-dark), #d4962e, var(--wood-dark));
+  border-radius: 5px;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.55);
+}
+.mount-leg-left  { transform-origin: top center; transform: translateX(-50%) rotate(-24deg); }
+.mount-leg-right { transform-origin: top center; transform: translateX(-50%) rotate(24deg); }
+
+.mount-feet {
+  display: flex;
+  justify-content: space-between;
+  width: 80%;
+  margin-top: -5px;
+}
+
+.mount-foot {
+  width: 58px;
+  height: 11px;
+  background: linear-gradient(to bottom, #d4962e, var(--wood-dark));
+  border-radius: 5px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.55);
+}
+
+/* ─── Banner sidebar section ─── */
+.banner-section {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.banner-section textarea {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.banner-section textarea:focus   { border-color: var(--accent-teal); }
+.banner-section textarea::placeholder { color: var(--text-muted); }
+
+#banner-text-save {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.45rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent-gold);
+  color: var(--bg-deep);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+#banner-text-save:hover { opacity: 0.85; }
+
+/* ─── Responsive: narrow screens ─── */
+@media (max-width: 700px) {
+  .wheel-area {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .sign-board {
+    width: min(75vw, 200px);
+  }
+  .sign-text {
+    font-size: 1.5rem;
+  }
+}
 </style>
 </head>
 <body>
 
 <div class="app">
   <main class="main">
-    <h1 class="title">GameChanger<span>Spin the wheel, pick a game</span></h1>
-    <div class="wheel-stage" id="wheel-stage">
-      <canvas class="wheel-canvas" id="wheel-canvas"></canvas>
-      <div class="pointer" id="pointer">
+    <!-- ═══ Bunting ═══
+         String: M 20 16 Q 340 72 660 16  →  x=20+640t  y=16+118t(1-t)
+         11 pennants at x=40,100,160,220,280,340,400,460,520,580,640
+         t=(x-20)/640  angle=atan(118(1-2t)/640)·180/π
+    -->
+    <div class="bunting-wrap" aria-label="GameChanger">
+      <svg class="bunting-svg" viewBox="0 0 680 118" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <filter id="pshadow" x="-30%" y="-20%" width="160%" height="160%">
+            <feDropShadow dx="1" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,0.6)"/>
+          </filter>
+          <!-- Highlight overlay for pennant sheen -->
+          <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="rgba(255,255,255,0.30)"/>
+            <stop offset="60%"  stop-color="rgba(255,255,255,0.05)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0.10)"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Rope shadow -->
+        <path d="M 20 18 Q 340 74 660 18" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="5" stroke-linecap="round"/>
+        <!-- Rope main -->
+        <path d="M 20 16 Q 340 72 660 16" fill="none" stroke="#b87e28" stroke-width="3.5" stroke-linecap="round"/>
+        <!-- Rope highlight -->
+        <path d="M 20 15 Q 340 71 660 15" fill="none" stroke="rgba(255,220,120,0.5)" stroke-width="1.2" stroke-linecap="round"/>
+
+        <!-- Wall anchor plates -->
+        <rect x="10" y="8" width="16" height="16" rx="3" fill="#8b5e1a"/>
+        <circle cx="18" cy="16" r="4" fill="#c8902d"/>
+        <circle cx="18" cy="16" r="1.8" fill="#f0d080"/>
+        <rect x="654" y="8" width="16" height="16" rx="3" fill="#8b5e1a"/>
+        <circle cx="662" cy="16" r="4" fill="#c8902d"/>
+        <circle cx="662" cy="16" r="1.8" fill="#f0d080"/>
+
+        <!-- ── G  x=40 y_s=19.6 angle=9.8° ── -->
+        <g transform="translate(40,19.6) rotate(9.8)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#ff6b6b"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="white" letter-spacing="1">G</text>
+        </g>
+        <circle cx="40" cy="19.6" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+
+        <!-- ── A  x=100 y_s=28.9 angle=7.9° ── -->
+        <g transform="translate(100,28.9) rotate(7.9)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#ffc857"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="#1a2e1a" letter-spacing="1">A</text>
+        </g>
+        <circle cx="100" cy="28.9" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+
+        <!-- ── M  x=160 y_s=36.1 angle=5.9° ── -->
+        <g transform="translate(160,36.1) rotate(5.9)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#4ecdc4"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="#1a2e1a" letter-spacing="1">M</text>
+        </g>
+        <circle cx="160" cy="36.1" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+
+        <!-- ── E  x=220 y_s=41.4 angle=4.0° ── -->
+        <g transform="translate(220,41.4) rotate(4.0)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#a06cd5"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="white" letter-spacing="1">E</text>
+        </g>
+        <circle cx="220" cy="41.4" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+
+        <!-- ── C  x=280 y_s=44.4 angle=2.0° ── -->
+        <g transform="translate(280,44.4) rotate(2.0)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#ff9f43"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="#1a2e1a" letter-spacing="1">C</text>
+        </g>
+        <circle cx="280" cy="44.4" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+
+        <!-- ── H  x=340 y_s=45.5 angle=0° ── -->
+        <g transform="translate(340,45.5) rotate(0)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#6ec6ff"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="#1a2e1a" letter-spacing="1">H</text>
+        </g>
+        <circle cx="340" cy="45.5" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+
+        <!-- ── A  x=400 y_s=44.4 angle=−2.0° ── -->
+        <g transform="translate(400,44.4) rotate(-2.0)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#ff78ae"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="white" letter-spacing="1">A</text>
+        </g>
+        <circle cx="400" cy="44.4" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+
+        <!-- ── N  x=460 y_s=41.4 angle=−4.0° ── -->
+        <g transform="translate(460,41.4) rotate(-4.0)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#7bed9f"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="#1a2e1a" letter-spacing="1">N</text>
+        </g>
+        <circle cx="460" cy="41.4" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+
+        <!-- ── G  x=520 y_s=36.1 angle=−5.9° ── -->
+        <g transform="translate(520,36.1) rotate(-5.9)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#ffd93d"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="#1a2e1a" letter-spacing="1">G</text>
+        </g>
+        <circle cx="520" cy="36.1" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+
+        <!-- ── E  x=580 y_s=28.9 angle=−7.9° ── -->
+        <g transform="translate(580,28.9) rotate(-7.9)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#6c5ce7"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="white" letter-spacing="1">E</text>
+        </g>
+        <circle cx="580" cy="28.9" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+
+        <!-- ── R  x=640 y_s=19.6 angle=−9.8° ── -->
+        <g transform="translate(640,19.6) rotate(-9.8)" filter="url(#pshadow)">
+          <polygon points="-22,0 22,0 0,58" fill="#00b894"/>
+          <polygon points="-22,0 22,0 0,58" fill="url(#pg)"/>
+          <text x="0" y="44" text-anchor="middle" font-family="'Bangers',cursive" font-size="28" fill="white" letter-spacing="1">R</text>
+        </g>
+        <circle cx="640" cy="19.6" r="3.5" fill="#d4962e" stroke="#8b5e1a" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="wheel-area">
+      <!-- Carnival sign -->
+      <div class="carnival-sign">
+        <div class="sign-board">
+          <div class="sign-bulbs">
+            <span class="sign-bulb"></span><span class="sign-bulb"></span><span class="sign-bulb"></span>
+            <span class="sign-bulb"></span><span class="sign-bulb"></span><span class="sign-bulb"></span>
+            <span class="sign-bulb"></span>
+          </div>
+          <p class="sign-text" id="sign-text">Spin the wheel,<br>pick a game</p>
+          <div class="sign-bulbs">
+            <span class="sign-bulb"></span><span class="sign-bulb"></span><span class="sign-bulb"></span>
+            <span class="sign-bulb"></span><span class="sign-bulb"></span><span class="sign-bulb"></span>
+            <span class="sign-bulb"></span>
+          </div>
+        </div>
+        <div class="sign-post"></div>
+        <div class="sign-post-base"></div>
+      </div>
+      <!-- Wheel + mount -->
+      <div class="wheel-wrap">
+        <div class="wheel-stage" id="wheel-stage">
+          <canvas class="wheel-canvas" id="wheel-canvas"></canvas>
+          <div class="pointer" id="pointer">
         <svg width="40" height="54" viewBox="0 0 40 54" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <!-- Metallic L→R gradient for triangle body -->
@@ -817,8 +1174,22 @@ body::after {
           <ellipse cx="17" cy="5" rx="3" ry="2.2" fill="rgba(255,255,255,0.55)"/>
         </svg>
       </div>
-    </div>
-    <button class="spin-btn" id="spin-btn">SPIN</button>
+        </div><!-- /.wheel-stage -->
+        <!-- A-frame mount -->
+        <div class="wheel-mount">
+          <div class="mount-crossbar"></div>
+          <div class="mount-legs">
+            <div class="mount-leg mount-leg-left"></div>
+            <div class="mount-leg mount-leg-right"></div>
+          </div>
+          <div class="mount-feet">
+            <div class="mount-foot mount-foot-left"></div>
+            <div class="mount-foot mount-foot-right"></div>
+          </div>
+        </div>
+        <button class="spin-btn" id="spin-btn">SPIN</button>
+      </div><!-- /.wheel-wrap -->
+    </div><!-- /.wheel-area -->
     <div class="no-games" id="no-games" style="display:none">
       <strong>No games on the wheel!</strong>
       Toggle some games on in the sidebar.
@@ -858,6 +1229,12 @@ body::after {
         <ul class="library-list" id="library-list"></ul>
         <button class="btn-add-selected" id="library-add-btn">Add Selected</button>
       </div>
+    </div>
+    <div class="banner-section">
+      <h3 style="margin-top:0">Banner</h3>
+      <label class="field-label" style="font-size:0.78rem;color:var(--text-muted);">Custom sign text</label>
+      <textarea id="banner-text-input" rows="2" maxlength="60" placeholder="Spin the wheel, pick a game"></textarea>
+      <button id="banner-text-save">Update Sign</button>
     </div>
     <div style="padding-top:0.75rem;margin-top:auto;">
       <button id="reset-btn" class="btn-reset">&#8635; Reset to defaults</button>
@@ -1794,6 +2171,23 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   resizeCanvas();
   drawWheel(currentAngle);
 });
+
+// ─── Banner Text ───
+(function initBanner() {
+  const signEl = document.getElementById('sign-text');
+  const input  = document.getElementById('banner-text-input');
+  const saved  = localStorage.getItem('bannerText');
+  if (saved && signEl) {
+    signEl.innerHTML = saved.replace(/\n/g, '<br>');
+    input.value = saved;
+  }
+  document.getElementById('banner-text-save').addEventListener('click', () => {
+    const val = input.value.trim();
+    if (!val) return;
+    signEl.innerHTML = val.replace(/\n/g, '<br>');
+    localStorage.setItem('bannerText', val);
+  });
+})();
 
 // ─── Sidebar Mobile ───
 sidebarToggle.addEventListener('click', () => {
