@@ -1746,6 +1746,8 @@ function drawHub(cx, cy, r) {
 }
 
 // ─── Spin Logic ───
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
 function spin() {
   const active = getActiveGames();
   if (active.length === 0 || spinning) return;
@@ -1769,7 +1771,6 @@ function spin() {
   const nSpins = 8 + Math.floor(Math.random() * 5);
   const startAngle = currentAngle;
   const totalTravel = (targetAngle - (startAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) + nSpins * Math.PI * 2;
-  const endAngle = startAngle + totalTravel;
   const duration = 4000 + Math.random() * 1500; // 4.0–5.5 seconds
 
   let lastTime = null;
@@ -1783,8 +1784,6 @@ function spin() {
   let settling = false;
   let settleStart = 0;
   let settleAngle = 0;
-
-  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
   const spinStart = performance.now();
 
@@ -1844,9 +1843,9 @@ function spin() {
     } else {
       // Spring-settle wobble: sinusoidal decay; clapper continues settling naturally above
       const elapsed = now - settleStart;
-      const duration = 500;
-      if (elapsed < duration) {
-        const t = elapsed / duration;
+      const settleDuration = 500;
+      if (elapsed < settleDuration) {
+        const t = elapsed / settleDuration;
         const decay = Math.exp(-t * 5.5);
         const wobble = Math.sin(t * Math.PI * 4) * 0.018 * decay;
         drawWheel(settleAngle + wobble);
