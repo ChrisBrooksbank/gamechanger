@@ -1906,8 +1906,8 @@ function resizeCanvas() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
-function drawWheel(angle) {
-  const active = getActiveGames();
+function drawWheel(angle, activeList) {
+  const active = activeList || getActiveGames();
   const size = canvas.clientWidth;
   const cx = size / 2;
   const cy = size / 2;
@@ -2223,7 +2223,7 @@ function spin() {
       const t = Math.min(elapsed / duration, 1);
       prevAngle = currentAngle;
       currentAngle = startAngle + totalTravel * easeOut(t);
-      drawWheel(currentAngle);
+      drawWheel(currentAngle, active);
 
       // Pin-crossing detection: segment boundaries at n*sliceAngle in wheel-space
       // cross the top of the screen (3π/2 in [0,2π] canvas coords)
@@ -2265,11 +2265,11 @@ function spin() {
         const t = elapsed / settleDuration;
         const decay = Math.exp(-t * 5.5);
         const wobble = Math.sin(t * Math.PI * 4) * 0.018 * decay;
-        drawWheel(settleAngle + wobble);
+        drawWheel(settleAngle + wobble, active);
         requestAnimationFrame(animate);
       } else {
         currentAngle = settleAngle;
-        drawWheel(currentAngle);
+        drawWheel(currentAngle, active);
       }
     }
   }
