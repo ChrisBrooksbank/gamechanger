@@ -549,6 +549,54 @@ body::after {
   color: var(--text-secondary);
 }
 
+/* ─── Accessibility: focus styles ─── */
+:focus-visible {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 2px;
+}
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 2px;
+}
+.skip-link {
+  position: fixed;
+  top: -100%;
+  left: 1rem;
+  z-index: 9999;
+  background: var(--accent-gold);
+  color: var(--bg-deep);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: top 0.2s;
+}
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* ─── Reduce motion preference ─── */
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── High contrast focus ─── */
+.high-contrast-focus :focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(0,0,0,0.8);
+}
+
 /* ─── Confetti Canvas ─── */
 #confetti-canvas {
   position: fixed;
@@ -1187,8 +1235,9 @@ body::after {
 </head>
 <body>
 
+<a class="skip-link" href="#spin-btn">Skip to spin</a>
 <div class="app">
-  <main class="main">
+  <main class="main" id="main-content">
     <!-- ═══ Bunting ═══
          String: M 20 16 Q 340 72 660 16  →  x=20+640t  y=16+118t(1-t)
          11 pennants at x=40,100,160,220,280,340,400,460,520,580,640
@@ -1405,16 +1454,16 @@ body::after {
           </div>
         </div>
         <button class="spin-btn" id="spin-btn">SPIN</button>
-        <div id="debug-info"></div>
+        <div id="debug-info" aria-live="polite"></div>
       </div><!-- /.wheel-wrap -->
     </div><!-- /.wheel-area -->
-    <div class="no-games" id="no-games" style="display:none">
+    <div class="no-games" id="no-games" style="display:none" role="status" aria-live="polite">
       <strong>No games on the wheel!</strong>
       Toggle some games on in the sidebar.
     </div>
   </main>
 
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar" id="sidebar" role="complementary" aria-label="Game settings">
     <div class="sidebar-version" id="sidebar-version"></div>
     <label class="sign-toggle-label"><input type="checkbox" id="sign-visible-cb" checked> Show sign</label>
     <div class="library-section">
@@ -1485,6 +1534,18 @@ body::after {
         <button class="btn-stress-test" id="auto-spin-btn" style="display:none">Auto-spin</button>
       </div>
     </div>
+    <div class="library-section">
+      <button class="library-toggle-btn" id="a11y-toggle-btn">
+        <em class="chevron">&#9654;</em> Accessibility
+      </button>
+      <div class="library-body" id="a11y-body" style="gap:0.5rem">
+        <label class="sign-toggle-label"><input type="checkbox" id="reduce-motion-cb"> Reduce motion</label>
+        <label class="sign-toggle-label"><input type="checkbox" id="high-contrast-cb"> High contrast focus</label>
+        <p style="font-size:0.72rem;color:var(--text-muted);line-height:1.5;margin:0">
+          Keyboard: <strong>Tab</strong> to navigate, <strong>Enter/Space</strong> to activate, <strong>Esc</strong> to close dialogs.
+        </p>
+      </div>
+    </div>
     <div style="padding-top:0.75rem;margin-top:auto;">
       <button id="reset-btn" class="btn-reset">&#8635; Reset to defaults</button>
     </div>
@@ -1493,7 +1554,7 @@ body::after {
   <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 </div>
 
-<div class="result-overlay" id="stress-overlay">
+<div class="result-overlay" id="stress-overlay" role="dialog" aria-label="Simulation results" aria-modal="true">
   <div class="result-card stress-card">
     <div class="label">Simulation Results</div>
     <div id="stress-results-body"></div>
@@ -1503,7 +1564,7 @@ body::after {
   </div>
 </div>
 
-<div class="result-overlay" id="result-overlay">
+<div class="result-overlay" id="result-overlay" role="dialog" aria-label="Spin result" aria-modal="true">
   <div class="result-card">
     <div class="label">Tonight you're playing</div>
     <div class="game-name" id="result-name">—</div>
@@ -2358,7 +2419,15 @@ function spin() {
         setTimeout(() => {
           spinning = false;
           spinBtn.disabled = false;
-          showResult(winner);
+          if (autoSpinning) {
+            // Skip modal — just record and immediately spin again
+            recordSpin(winner);
+            renderPickBadges();
+            debugInfo.textContent = `Auto-spin #${autoSpinCount} — last: ${winner.name}`;
+            spin();
+          } else {
+            showResult(winner);
+          }
         }, 650);
       }
     } else {
@@ -2402,26 +2471,15 @@ function showResult(game) {
   if (statsBody && statsBody.classList.contains('visible')) renderStatsPanel();
   resultOverlay.classList.add('visible');
   launchConfetti();
-
-  // Auto-spin: auto-close and spin again after 1.5s
-  if (autoSpinning) {
-    setTimeout(() => {
-      if (!autoSpinning) return;
-      hideResult(false);
-      setTimeout(spin, 300);
-    }, 1500);
-  }
 }
 
-function hideResult(manual = true) {
+function hideResult() {
   resultOverlay.classList.remove('visible');
-  // Manually closing the modal stops auto-spin
-  if (manual && autoSpinning) stopAutoSpin();
 }
 
-resultClose.addEventListener('click', () => hideResult(true));
+resultClose.addEventListener('click', hideResult);
 resultRespin.addEventListener('click', () => {
-  hideResult(true);
+  hideResult();
   setTimeout(spin, 300);
 });
 
@@ -2877,6 +2935,53 @@ function stopAutoSpin() {
 autoSpinBtn.addEventListener('click', () => {
   if (autoSpinning) stopAutoSpin();
   else startAutoSpin();
+});
+
+// ─── Accessibility ───
+setupToggle('a11y-toggle-btn', 'a11y-body');
+
+const reduceMotionCb = document.getElementById('reduce-motion-cb');
+const highContrastCb = document.getElementById('high-contrast-cb');
+
+// Respect OS preference on load
+if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  reduceMotionCb.checked = true;
+  document.body.classList.add('reduce-motion');
+}
+
+// Restore saved preferences
+if (localStorage.getItem('reduceMotion') === 'true') {
+  reduceMotionCb.checked = true;
+  document.body.classList.add('reduce-motion');
+}
+if (localStorage.getItem('highContrastFocus') === 'true') {
+  highContrastCb.checked = true;
+  document.body.classList.add('high-contrast-focus');
+}
+
+reduceMotionCb.addEventListener('change', () => {
+  document.body.classList.toggle('reduce-motion', reduceMotionCb.checked);
+  localStorage.setItem('reduceMotion', reduceMotionCb.checked);
+});
+
+highContrastCb.addEventListener('change', () => {
+  document.body.classList.toggle('high-contrast-focus', highContrastCb.checked);
+  localStorage.setItem('highContrastFocus', highContrastCb.checked);
+});
+
+// Escape key closes dialogs and sidebar
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (resultOverlay.classList.contains('visible')) {
+      hideResult();
+    } else if (document.getElementById('stress-overlay').classList.contains('visible')) {
+      document.getElementById('stress-overlay').classList.remove('visible');
+    } else if (sidebar.classList.contains('open')) {
+      sidebar.classList.remove('open');
+      sidebarBackdrop.classList.remove('visible');
+      sidebarToggle.focus();
+    }
+  }
 });
 
 // ─── Init ───
