@@ -1117,6 +1117,30 @@ body::after {
   padding: 0.4rem 0 0.2rem;
   text-align: center;
 }
+
+.pwa-toast {
+  position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%) translateY(120%);
+  background: #1e3818; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.75rem 1rem;
+  display: flex; align-items: center; gap: 0.75rem;
+  font-size: 0.85rem; color: var(--text-primary);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  z-index: 9999; max-width: min(360px, 92vw);
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+.pwa-toast.show { transform: translateX(-50%) translateY(0); }
+.pwa-toast-msg { flex: 1; white-space: normal; }
+.pwa-toast-btn {
+  padding: 0.3rem 0.75rem; border-radius: 8px;
+  background: var(--accent-gold); color: #1a0a00;
+  font-weight: 700; font-size: 0.8rem; cursor: pointer;
+  border: none; font-family: inherit; flex-shrink: 0;
+}
+.pwa-toast-dismiss {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; font-size: 1.1rem; padding: 0 0.2rem; flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -1432,6 +1456,7 @@ body::after {
 
 <script type="module">
 import { pickWinner, cryptoRandom } from './select.js';
+import { computeTargetAngle, computeTotalTravel } from './spin.js';
 // ─── Default Games ───
 const DEFAULT_GAMES = [
   { name: 'TimeGuessr', url: 'https://timeguessr.com/', enabled: true, custom: false },
@@ -1718,6 +1743,9 @@ function startStressTest() {
   const active = getActiveGames();
   if (active.length === 0) return;
   if (stressTestTimer) stopStressTest();
+  // Close sidebar on mobile so the wheel is visible
+  sidebar.classList.remove('open');
+  sidebarBackdrop.classList.remove('visible');
 
   const TOTAL = 10000;
   const BATCH = 100; // picks per frame
@@ -1820,7 +1848,10 @@ function getActiveGames() {
 
 // ─── Audio ───
 function initAudio() {
-  if (audioCtx) return;
+  if (audioCtx) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return;
+  }
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
 
@@ -2165,6 +2196,8 @@ const easings = [
 function spin() {
   const active = getActiveGames();
   if (active.length === 0 || spinning) return;
+  // Hide any active simulation results before spinning
+  if (stressTestTimer || stressTestCounts) stopStressTest();
 
   initAudio();
   spinning = true;
@@ -2181,13 +2214,11 @@ function spin() {
 
   // Target: pointer centered on winner segment with random offset within middle 60% of segment
   const randomOffset = (0.1 + cryptoRandom() * 0.8) * sliceAngle;
-  const targetPointerAngle = winnerIndex * sliceAngle + randomOffset;
-  // Invert the finalPointerAngle formula to get target currentAngle
-  const targetAngle = (-Math.PI / 2 - targetPointerAngle + Math.PI * 4) % (Math.PI * 2);
-  // Add enough full rotations for a dramatic spin (8–12 rotations)
-  const nSpins = 6 + cryptoRandom() * 9;
-  const startAngle = currentAngle;
-  const totalTravel = (targetAngle - (startAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) + nSpins * Math.PI * 2;
+  const targetAngle  = computeTargetAngle(winnerIndex, active.length, randomOffset);
+  // Add enough full rotations for a dramatic spin (6–15 rotations); must be integer
+  const nSpins       = 6 + Math.floor(cryptoRandom() * 10);
+  const startAngle   = currentAngle;
+  const totalTravel  = computeTotalTravel(targetAngle, startAngle, nSpins);
   const duration = 3500 + cryptoRandom() * 2500; // 3.5–6.0 seconds
 
   let lastTime = null;
@@ -2205,6 +2236,7 @@ function spin() {
   const spinStart = performance.now();
 
   function animate(now) {
+    try {
     if (lastTime === null) { lastTime = now; requestAnimationFrame(animate); return; }
     const dt = now - lastTime;
     lastTime = now;
@@ -2236,7 +2268,7 @@ function spin() {
           const speed = (currentAngle - prevAngle) / dt; // radians per ms
           const impulse = Math.min(speed / 0.065, 1);
           clapperOmega += 0.025 + impulse * 0.09;
-          playTick(speed, impulse);
+          try { playTick(speed, impulse); } catch (e) { /* audio error — skip tick, keep animation running */ }
           pointer.classList.add('tick');
           setTimeout(() => pointer.classList.remove('tick'), 60);
           break; // at most one pin per frame
@@ -2271,6 +2303,10 @@ function spin() {
         currentAngle = settleAngle;
         drawWheel(currentAngle);
       }
+    }
+    } catch (e) {
+      spinning = false;
+      spinBtn.disabled = false;
     }
   }
 
@@ -2692,10 +2728,91 @@ window.addEventListener('resize', () => {
   resizeConfetti();
 });
 </script>
+<div class="pwa-toast" id="pwa-toast" role="status" aria-live="polite">
+  <span class="pwa-toast-msg" id="pwa-toast-msg"></span>
+  <button class="pwa-toast-btn" id="pwa-toast-action"></button>
+  <button class="pwa-toast-dismiss" id="pwa-toast-dismiss" aria-label="Dismiss">&#x2715;</button>
+</div>
 <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
+(function () {
+  // ── Toast helper ──
+  const toast    = document.getElementById('pwa-toast');
+  const toastMsg = document.getElementById('pwa-toast-msg');
+  const toastBtn = document.getElementById('pwa-toast-action');
+  const toastX   = document.getElementById('pwa-toast-dismiss');
+  let toastTimer;
+
+  function showToast(msg, btnLabel, onAction, autoDismissMs) {
+    toastMsg.textContent = msg;
+    toastBtn.textContent = btnLabel;
+    toastBtn.onclick = () => { hideToast(); onAction(); };
+    clearTimeout(toastTimer);
+    toast.classList.add('show');
+    if (autoDismissMs) toastTimer = setTimeout(hideToast, autoDismissMs);
   }
+  function hideToast() { toast.classList.remove('show'); }
+  toastX.addEventListener('click', hideToast);
+
+  // ── Install prompt (non-iOS) ──
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                    || navigator.standalone === true;
+  let deferredPrompt = null;
+
+  if (!isIos && !isStandalone) {
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (!localStorage.getItem('pwa_install_dismissed')) {
+        setTimeout(() => showToast(
+          '📲 Add GameChanger to your home screen',
+          'Install',
+          async () => {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') localStorage.setItem('pwa_install_dismissed', '1');
+            deferredPrompt = null;
+          },
+          30000   // auto-dismiss after 30 s
+        ), 3000);
+      }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      localStorage.setItem('pwa_install_dismissed', '1');
+      hideToast();
+    });
+  }
+
+  // ── Service worker + update detection ──
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      function offerUpdate() {
+        showToast('🔄 Update available', 'Update now', () => {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        });
+      }
+
+      // New SW already waiting on first load?
+      if (reg.waiting) offerUpdate();
+
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            offerUpdate();
+          }
+        });
+      });
+    });
+
+    // Reload once the new SW takes control
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) { refreshing = true; location.reload(); }
+    });
+  }
+})();
 </script>
 </body>
 </html>
