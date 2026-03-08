@@ -211,6 +211,11 @@ body::after {
 
 /* ─── Sidebar ─── */
 .sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
   width: 340px;
   background: var(--bg-card);
   border-left: 1px solid var(--border);
@@ -218,7 +223,56 @@ body::after {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  box-shadow: -8px 0 32px rgba(0,0,0,0.4);
+}
+.sidebar.open { transform: translateX(0); }
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 140;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.sidebar-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ─── Sidebar version info ─── */
+.sidebar-version {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: right;
+  padding-bottom: 0.6rem;
+  margin-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── Sign visibility toggle ─── */
+.sign-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.4rem 0;
+}
+.sign-toggle-label input { accent-color: var(--accent-teal); }
+.carnival-sign.hidden { display: none; }
+
+/* ─── Debug info ─── */
+#debug-info {
+  font-size: 0.85rem;
+  color: var(--accent-coral);
+  text-align: center;
+  min-height: 1.2em;
+  margin-top: 0.5rem;
 }
 
 .sidebar h2 {
@@ -490,34 +544,8 @@ body::after {
 /* ─── Responsive ─── */
 @media (max-width: 800px) {
   .sidebar {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 150;
-    transform: translateX(100%);
-    box-shadow: -8px 0 32px rgba(0,0,0,0.4);
     width: min(340px, 85vw);
   }
-  .sidebar.open { transform: translateX(0); }
-  .sidebar-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 140;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-  }
-  .sidebar-backdrop.visible {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-@media (min-width: 801px) {
-  .sidebar-toggle { display: none; }
-  .sidebar-backdrop { display: none; }
 }
 
 /* ─── Scrollbar ─── */
@@ -936,16 +964,7 @@ body::after {
 }
 
 /* ─── Banner sidebar section ─── */
-.banner-section {
-  border-top: 1px solid var(--border);
-  padding-top: 0.75rem;
-  margin-top: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.banner-section textarea {
+#banner-body textarea {
   font-family: 'Nunito', sans-serif;
   font-size: 0.85rem;
   padding: 0.5rem 0.75rem;
@@ -956,9 +975,10 @@ body::after {
   resize: vertical;
   outline: none;
   transition: border-color 0.2s;
+  width: 100%;
 }
-.banner-section textarea:focus   { border-color: var(--accent-teal); }
-.banner-section textarea::placeholder { color: var(--text-muted); }
+#banner-body textarea:focus   { border-color: var(--accent-teal); }
+#banner-body textarea::placeholder { color: var(--text-muted); }
 
 #banner-text-save {
   font-family: 'Nunito', sans-serif;
@@ -976,10 +996,16 @@ body::after {
 
 /* ─── Responsive: narrow screens ─── */
 @media (max-width: 700px) {
+  .main {
+    padding: 0.75rem 1rem 1.5rem;
+  }
   .wheel-area {
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
+  }
+  .carnival-sign {
+    margin-top: 0;
   }
   .sign-board {
     width: min(75vw, 200px);
@@ -1363,6 +1389,7 @@ body::after {
           </div>
         </div>
         <button class="spin-btn" id="spin-btn">SPIN</button>
+        <div id="debug-info"></div>
       </div><!-- /.wheel-wrap -->
     </div><!-- /.wheel-area -->
     <div class="no-games" id="no-games" style="display:none">
@@ -1372,28 +1399,36 @@ body::after {
   </main>
 
   <aside class="sidebar" id="sidebar">
-    <h2>Game List</h2>
-    <h3>Board Games</h3>
-    <ul class="game-list" id="game-list"></ul>
-    <div class="add-form" id="add-form">
-      <h3 style="margin-top:0">Add Custom Game</h3>
-      <input type="text" id="input-name" placeholder="Game name" maxlength="40">
-      <input type="url" id="input-url" placeholder="URL (optional)">
-      <button id="add-btn">+ Add Game</button>
-      <div style="display:flex;gap:0.5rem;">
-        <button id="import-toggle-btn" class="btn-import-toggle" style="flex:1">&#8679; Import CSV</button>
-        <button id="export-btn" class="btn-import-toggle" title="Export game list as CSV">&#8681; Export</button>
+    <div class="sidebar-version" id="sidebar-version"></div>
+    <label class="sign-toggle-label"><input type="checkbox" id="sign-visible-cb" checked> Show sign</label>
+    <div class="library-section">
+      <button class="library-toggle-btn" id="gamelist-toggle-btn">
+        <em class="chevron">&#9654;</em> Game List
+      </button>
+      <div class="library-body" id="gamelist-body">
+        <h3>Board Games</h3>
+        <ul class="game-list" id="game-list"></ul>
+        <div class="add-form" id="add-form">
+          <h3 style="margin-top:0">Add Custom Game</h3>
+          <input type="text" id="input-name" placeholder="Game name" maxlength="40">
+          <input type="url" id="input-url" placeholder="URL (optional)">
+          <button id="add-btn">+ Add Game</button>
+          <div style="display:flex;gap:0.5rem;">
+            <button id="import-toggle-btn" class="btn-import-toggle" style="flex:1">&#8679; Import CSV</button>
+            <button id="export-btn" class="btn-import-toggle" title="Export game list as CSV">&#8681; Export</button>
+          </div>
+        </div>
+        <div class="import-panel" id="import-panel">
+          <textarea id="import-textarea" placeholder="Paste CSV — one game per line:&#10;Game Name&#10;Game Name,https://url.com&#10;# Lines starting with # are skipped"></textarea>
+          <label class="file-label" for="import-file">&#128193; Or pick a .csv / .txt file&hellip;</label>
+          <input type="file" id="import-file" accept=".csv,.txt">
+          <div class="import-btn-row">
+            <button class="btn-do-import" id="import-do-btn">Import</button>
+            <button class="btn-cancel-import" id="import-cancel-btn">Cancel</button>
+          </div>
+          <div class="import-msg" id="import-msg"></div>
+        </div>
       </div>
-    </div>
-    <div class="import-panel" id="import-panel">
-      <textarea id="import-textarea" placeholder="Paste CSV — one game per line:&#10;Game Name&#10;Game Name,https://url.com&#10;# Lines starting with # are skipped"></textarea>
-      <label class="file-label" for="import-file">&#128193; Or pick a .csv / .txt file&hellip;</label>
-      <input type="file" id="import-file" accept=".csv,.txt">
-      <div class="import-btn-row">
-        <button class="btn-do-import" id="import-do-btn">Import</button>
-        <button class="btn-cancel-import" id="import-cancel-btn">Cancel</button>
-      </div>
-      <div class="import-msg" id="import-msg"></div>
     </div>
     <div class="library-section">
       <button class="library-toggle-btn" id="stats-toggle-btn">
@@ -1415,11 +1450,24 @@ body::after {
         <button class="btn-add-selected" id="library-add-btn">Add Selected</button>
       </div>
     </div>
-    <div class="banner-section">
-      <h3 style="margin-top:0">Banner</h3>
-      <label class="field-label" style="font-size:0.78rem;color:var(--text-muted);">Custom sign text</label>
-      <textarea id="banner-text-input" rows="2" maxlength="60" placeholder="Spin the wheel, pick a game"></textarea>
-      <button id="banner-text-save">Update Sign</button>
+    <div class="library-section">
+      <button class="library-toggle-btn" id="banner-toggle-btn">
+        <em class="chevron">&#9654;</em> Banner
+      </button>
+      <div class="library-body" id="banner-body" style="gap:0.4rem">
+        <label class="field-label" style="font-size:0.78rem;color:var(--text-muted);">Custom sign text</label>
+        <textarea id="banner-text-input" rows="2" maxlength="60" placeholder="Spin the wheel, pick a game"></textarea>
+        <button id="banner-text-save">Update Sign</button>
+      </div>
+    </div>
+    <div class="library-section">
+      <button class="library-toggle-btn" id="debug-toggle-btn">
+        <em class="chevron">&#9654;</em> Debug
+      </button>
+      <div class="library-body" id="debug-body" style="gap:0.5rem">
+        <label class="sign-toggle-label"><input type="checkbox" id="debug-mode-cb"> Enable debug mode</label>
+        <button class="btn-stress-test" id="auto-spin-btn" style="display:none">Auto-spin</button>
+      </div>
     </div>
     <div style="padding-top:0.75rem;margin-top:auto;">
       <button id="reset-btn" class="btn-reset">&#8635; Reset to defaults</button>
@@ -2209,6 +2257,17 @@ function spin() {
   const winner = pickWinner(active);
   const winnerIndex = active.indexOf(winner);
 
+  // Debug: show predetermined winner
+  if (debugMode) {
+    debugInfo.textContent = `Next winner: ${winner.name}`;
+  }
+
+  // Track auto-spin counts
+  if (autoSpinning) {
+    autoSpinCount++;
+    autoSpinCounts[winner.name] = (autoSpinCounts[winner.name] || 0) + 1;
+  }
+
   // Target: pointer centered on winner segment with random offset within middle 60% of segment
   const randomOffset = (0.1 + cryptoRandom() * 0.8) * sliceAngle;
   const targetAngle  = computeTargetAngle(winnerIndex, active.length, randomOffset);
@@ -2327,15 +2386,26 @@ function showResult(game) {
   if (statsBody && statsBody.classList.contains('visible')) renderStatsPanel();
   resultOverlay.classList.add('visible');
   launchConfetti();
+
+  // Auto-spin: auto-close and spin again after 1.5s
+  if (autoSpinning) {
+    setTimeout(() => {
+      if (!autoSpinning) return;
+      hideResult(false);
+      setTimeout(spin, 300);
+    }, 1500);
+  }
 }
 
-function hideResult() {
+function hideResult(manual = true) {
   resultOverlay.classList.remove('visible');
+  // Manually closing the modal stops auto-spin
+  if (manual && autoSpinning) stopAutoSpin();
 }
 
-resultClose.addEventListener('click', hideResult);
+resultClose.addEventListener('click', () => hideResult(true));
 resultRespin.addEventListener('click', () => {
-  hideResult();
+  hideResult(true);
   setTimeout(spin, 300);
 });
 
@@ -2708,6 +2778,90 @@ sidebarBackdrop.addEventListener('click', () => {
 
 // ─── Spin ───
 spinBtn.addEventListener('click', spin);
+
+// ─── Version Info ───
+const APP_VERSION = '1.0.0';
+const DEPLOY_DATE = '2026-03-08';
+document.getElementById('sidebar-version').textContent = `v${APP_VERSION} — ${DEPLOY_DATE}`;
+
+// ─── Sign Visibility Toggle ───
+(function initSignToggle() {
+  const cb = document.getElementById('sign-visible-cb');
+  const sign = document.querySelector('.carnival-sign');
+  const stored = localStorage.getItem('signVisible');
+  if (stored === 'false') {
+    cb.checked = false;
+    sign.classList.add('hidden');
+  }
+  cb.addEventListener('change', () => {
+    sign.classList.toggle('hidden', !cb.checked);
+    localStorage.setItem('signVisible', cb.checked);
+  });
+})();
+
+// ─── Collapsible Section Toggles ───
+function setupToggle(btnId, bodyId) {
+  const btn = document.getElementById(btnId);
+  const body = document.getElementById(bodyId);
+  if (!btn || !body) return;
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('open');
+    body.classList.toggle('visible');
+  });
+}
+setupToggle('gamelist-toggle-btn', 'gamelist-body');
+setupToggle('banner-toggle-btn', 'banner-body');
+setupToggle('debug-toggle-btn', 'debug-body');
+
+// ─── Debug Mode ───
+let debugMode = false;
+let autoSpinning = false;
+let autoSpinCount = 0;
+let autoSpinCounts = {};
+
+const debugCb = document.getElementById('debug-mode-cb');
+const autoSpinBtn = document.getElementById('auto-spin-btn');
+const debugInfo = document.getElementById('debug-info');
+
+debugCb.addEventListener('change', () => {
+  debugMode = debugCb.checked;
+  autoSpinBtn.style.display = debugMode ? '' : 'none';
+  if (!debugMode) {
+    stopAutoSpin();
+    debugInfo.textContent = '';
+  }
+});
+
+function startAutoSpin() {
+  const active = getActiveGames();
+  if (active.length === 0) return;
+  autoSpinning = true;
+  autoSpinCount = 0;
+  autoSpinCounts = {};
+  active.forEach(g => { autoSpinCounts[g.name] = 0; });
+  autoSpinBtn.textContent = 'Stop auto-spin';
+  spin();
+}
+
+function stopAutoSpin() {
+  const wasSpinning = autoSpinning;
+  const finalCounts = { ...autoSpinCounts };
+  const finalCount = autoSpinCount;
+  autoSpinning = false;
+  autoSpinBtn.textContent = 'Auto-spin';
+  // Show stress-test style results if we accumulated any spins
+  if (wasSpinning && finalCount > 0) {
+    const active = getActiveGames();
+    if (active.length > 0) {
+      showStressResults(finalCounts, finalCount, active);
+    }
+  }
+}
+
+autoSpinBtn.addEventListener('click', () => {
+  if (autoSpinning) stopAutoSpin();
+  else startAutoSpin();
+});
 
 // ─── Init ───
 loadGames();
