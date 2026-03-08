@@ -1612,16 +1612,13 @@ function renderFairnessFooter(game) {
   if (!footer) return;
   const h = loadHistory();
   const active = getActiveGames();
-  const n = active.length;
-  const pct = n > 0 ? (100 / n).toFixed(1) : '0.0';
-  let html = `\uD83D\uDD12 Picked by your device\u2019s secure random number generator<br>`;
-  html += `1-in-${n} chance (${pct}%) for each active game`;
+  let html = '';
   if (h.totalSpins >= 2) {
     const missed = active.filter(g => !(h.picks[g.name] > 0));
     if (missed.length > 0) {
       const names = missed.map(g => g.name).join(', ');
       const verb = missed.length === 1 ? `hasn\u2019t` : `haven\u2019t`;
-      html += `<br>Spun ${h.totalSpins} times \u2014 ${names} ${verb} come up yet`;
+      html = `Spun ${h.totalSpins} times \u2014 ${names} ${verb} come up yet`;
     }
   }
   footer.innerHTML = html;
