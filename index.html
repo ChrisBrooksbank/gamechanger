@@ -247,8 +247,9 @@ body::after {
 .sidebar-version {
   font-size: 0.72rem;
   color: var(--text-muted);
-  text-align: right;
-  padding-bottom: 0.6rem;
+  text-align: left;
+  padding: 0.4rem 0 0.6rem;
+  margin-top: 2.5rem;
   margin-bottom: 0.6rem;
   border-bottom: 1px solid var(--border);
 }
@@ -2781,8 +2782,8 @@ spinBtn.addEventListener('click', spin);
 
 // ─── Version Info ───
 const APP_VERSION = '1.0.0';
-const DEPLOY_DATE = '2026-03-08';
-document.getElementById('sidebar-version').textContent = `v${APP_VERSION} — ${DEPLOY_DATE}`;
+const DEPLOY_DATE = '08 Mar 2026 20:20 UTC';
+document.getElementById('sidebar-version').textContent = `v${APP_VERSION} — deployed ${DEPLOY_DATE}`;
 
 // ─── Sign Visibility Toggle ───
 (function initSignToggle() {
