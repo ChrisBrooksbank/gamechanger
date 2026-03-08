@@ -1280,7 +1280,8 @@ body::after {
 
 <canvas id="confetti-canvas"></canvas>
 
-<script>
+<script type="module">
+import { pickWinner, cryptoRandom } from './select.js';
 // ─── Default Games ───
 const DEFAULT_GAMES = [
   { name: 'TimeGuessr', url: 'https://timeguessr.com/', enabled: true, custom: false },
@@ -1746,7 +1747,14 @@ function drawHub(cx, cy, r) {
 }
 
 // ─── Spin Logic ───
-function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+const easings = [
+  t => 1 - Math.pow(1 - t, 3),   // cubic ease-out (classic)
+  t => 1 - Math.pow(1 - t, 4),   // quartic: fast start, hard stop
+  t => 1 - Math.pow(1 - t, 2),   // quadratic: gentle decel
+  t => t < 0.6                    // two-phase: coast then hard brake
+      ? (t / 0.6) * 0.85
+      : 0.85 + (1 - Math.pow(1 - ((t - 0.6) / 0.4), 4)) * 0.15,
+];
 
 function spin() {
   const active = getActiveGames();
@@ -1758,20 +1766,23 @@ function spin() {
 
   const sliceAngle = (Math.PI * 2) / active.length;
 
+  // Pick a random easing profile for this spin
+  const easeOut = easings[Math.floor(cryptoRandom() * easings.length)];
+
   // Pick winner upfront for true uniform randomness
-  const winnerIndex = Math.floor(Math.random() * active.length);
-  const winner = active[winnerIndex];
+  const winner = pickWinner(active);
+  const winnerIndex = active.indexOf(winner);
 
   // Target: pointer centered on winner segment with random offset within middle 60% of segment
-  const randomOffset = (0.2 + Math.random() * 0.6) * sliceAngle;
+  const randomOffset = (0.1 + cryptoRandom() * 0.8) * sliceAngle;
   const targetPointerAngle = winnerIndex * sliceAngle + randomOffset;
   // Invert the finalPointerAngle formula to get target currentAngle
   const targetAngle = (-Math.PI / 2 - targetPointerAngle + Math.PI * 4) % (Math.PI * 2);
   // Add enough full rotations for a dramatic spin (8–12 rotations)
-  const nSpins = 8 + Math.floor(Math.random() * 5);
+  const nSpins = 6 + cryptoRandom() * 9;
   const startAngle = currentAngle;
   const totalTravel = (targetAngle - (startAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) + nSpins * Math.PI * 2;
-  const duration = 4000 + Math.random() * 1500; // 4.0–5.5 seconds
+  const duration = 3500 + cryptoRandom() * 2500; // 3.5–6.0 seconds
 
   let lastTime = null;
   let prevAngle = currentAngle;
