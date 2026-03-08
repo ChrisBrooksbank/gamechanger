@@ -988,6 +988,135 @@ body::after {
     font-size: 1.5rem;
   }
 }
+
+/* ─── Fairness Footer ─── */
+.fairness-footer {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  text-align: center;
+}
+.fairness-footer:empty { display: none; }
+
+/* ─── Pick Badges ─── */
+.pick-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.07);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  margin-left: 0.25rem;
+}
+.pick-badge.zero {
+  background: rgba(255, 107, 107, 0.18);
+  color: var(--accent-coral);
+}
+
+/* ─── Stats Panel ─── */
+.btn-clear-history {
+  margin-top: 0.6rem;
+  width: 100%;
+  padding: 0.4rem;
+  font-size: 0.78rem;
+  background: rgba(255,107,107,0.12);
+  color: var(--accent-coral);
+  border: 1px solid rgba(255,107,107,0.3);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-clear-history:hover { background: rgba(255,107,107,0.22); }
+
+/* ─── Stress Results Modal ─── */
+.stress-card {
+  max-width: 480px;
+  width: 92vw;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.stress-verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.stress-verdict .verdict-icon { font-size: 1.4rem; flex-shrink: 0; }
+.stress-verdict .verdict-text { color: var(--text-secondary); }
+.stress-verdict .verdict-text strong { color: var(--text-primary); display: block; margin-bottom: 0.2rem; }
+.stress-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+.stress-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  text-align: right;
+  padding: 0.2rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.stress-table th:first-child { text-align: left; }
+.stress-table td {
+  padding: 0.3rem 0.4rem;
+  text-align: right;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.stress-table td:first-child { text-align: left; color: var(--text-primary); }
+.stress-bar-wrap { background: rgba(255,255,255,0.08); border-radius: 3px; height: 6px; overflow: hidden; width: 60px; display: inline-block; vertical-align: middle; }
+.stress-bar-fill { height: 100%; border-radius: 3px; background: var(--accent-teal); }
+.stress-chi { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 0.5rem; }
+
+.btn-stress-test {
+  margin-top: 0.4rem;
+  width: 100%;
+  padding: 0.4rem;
+  font-size: 0.78rem;
+  background: rgba(78,205,196,0.12);
+  color: var(--accent-teal);
+  border: 1px solid rgba(78,205,196,0.3);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-stress-test:hover { background: rgba(78,205,196,0.22); }
+
+.stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.78rem;
+  border-bottom: 1px solid var(--border);
+}
+.stats-row:last-child { border-bottom: none; }
+.stats-row .stats-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+.stats-row .stats-count { color: var(--text-primary); font-weight: 700; min-width: 2ch; text-align: right; }
+.stats-row .stats-pct  { color: var(--text-muted); min-width: 5ch; text-align: right; }
+.stats-total {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 0.4rem 0 0.2rem;
+  text-align: center;
+}
 </style>
 </head>
 <body>
@@ -1243,6 +1372,16 @@ body::after {
       <div class="import-msg" id="import-msg"></div>
     </div>
     <div class="library-section">
+      <button class="library-toggle-btn" id="stats-toggle-btn">
+        <em class="chevron">&#9654;</em> Spin Stats
+      </button>
+      <div class="library-body" id="stats-body">
+        <div id="stats-panel-content"></div>
+        <button class="btn-clear-history" id="clear-history-btn">Clear History</button>
+        <button class="btn-stress-test" id="stress-test-btn">🎲 Simulate 10,000 spins</button>
+      </div>
+    </div>
+    <div class="library-section">
       <button class="library-toggle-btn" id="library-toggle-btn">
         <em class="chevron">&#9654;</em> Expansion Packs
       </button>
@@ -1266,6 +1405,16 @@ body::after {
   <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 </div>
 
+<div class="result-overlay" id="stress-overlay">
+  <div class="result-card stress-card">
+    <div class="label">Simulation Results</div>
+    <div id="stress-results-body"></div>
+    <div class="btn-row" style="margin-top:1rem">
+      <button class="btn btn-ghost" id="stress-close">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="result-overlay" id="result-overlay">
   <div class="result-card">
     <div class="label">Tonight you're playing</div>
@@ -1275,6 +1424,7 @@ body::after {
       <button class="btn btn-secondary" id="result-respin">Spin Again</button>
       <button class="btn btn-ghost" id="result-close">Close</button>
     </div>
+    <div class="fairness-footer" id="fairness-footer"></div>
   </div>
 </div>
 
@@ -1407,6 +1557,247 @@ function loadGames() {
 
 function saveGames() {
   localStorage.setItem('gamechanger_games', JSON.stringify(games));
+}
+
+// ─── Spin History ───
+function loadHistory() {
+  const stored = localStorage.getItem('gamechanger_history');
+  if (stored) {
+    try {
+      const h = JSON.parse(stored);
+      if (typeof h.totalSpins === 'number' && typeof h.picks === 'object') return h;
+    } catch(e) {}
+  }
+  return { totalSpins: 0, picks: {} };
+}
+
+function saveHistory(h) {
+  localStorage.setItem('gamechanger_history', JSON.stringify(h));
+}
+
+function recordSpin(game) {
+  const h = loadHistory();
+  h.totalSpins++;
+  h.picks[game.name] = (h.picks[game.name] || 0) + 1;
+  saveHistory(h);
+}
+
+function renderFairnessFooter() {
+  const footer = document.getElementById('fairness-footer');
+  if (!footer) return;
+  footer.innerHTML = `\uD83D\uDD12 Picked by your device\u2019s secure random number generator`;
+}
+
+function renderPickBadges() {
+  const h = loadHistory();
+  const items = gameListEl.querySelectorAll('.game-item');
+  items.forEach((li, idx) => {
+    // Remove any existing badge
+    const old = li.querySelector('.pick-badge');
+    if (old) old.remove();
+    const game = games[idx];
+    if (!game) return;
+    const count = h.picks[game.name] || 0;
+    const badge = document.createElement('span');
+    badge.className = 'pick-badge' + (count === 0 ? ' zero' : '');
+    badge.textContent = `${count}\u00d7`;
+    // Insert before the toggle (which is the third child: dot, label, toggle)
+    const toggle = li.querySelector('.toggle');
+    if (toggle) li.insertBefore(badge, toggle);
+    else li.appendChild(badge);
+  });
+}
+
+function renderStatsPanel() {
+  const content = document.getElementById('stats-panel-content');
+  if (!content) return;
+  const h = loadHistory();
+  const active = getActiveGames();
+  const n = active.length;
+  let html = `<div class="stats-total">Total spins: <strong>${h.totalSpins}</strong></div>`;
+  if (h.totalSpins === 0) {
+    html += `<div class="stats-total" style="padding-top:0.2rem">No spins yet</div>`;
+    content.innerHTML = html;
+    return;
+  }
+  active.forEach(game => {
+    const count = h.picks[game.name] || 0;
+    const pct = h.totalSpins > 0 ? ((count / h.totalSpins) * 100).toFixed(1) : '0.0';
+    const expPct = n > 0 ? (100 / n).toFixed(1) : '0.0';
+    html += `<div class="stats-row">
+      <span class="stats-name">${game.name}</span>
+      <span class="stats-count">${count}</span>
+      <span class="stats-pct">${pct}% <span style="color:var(--text-muted);font-weight:400">(exp ${expPct}%)</span></span>
+    </div>`;
+  });
+  content.innerHTML = html;
+}
+
+function clearHistory() {
+  saveHistory({ totalSpins: 0, picks: {} });
+  renderPickBadges();
+  const statsBody = document.getElementById('stats-body');
+  if (statsBody && statsBody.classList.contains('visible')) renderStatsPanel();
+}
+
+// ─── Stress Test ───
+let stressTestCounts = null; // null = inactive, object = active
+let stressTestTimer = null;
+
+function drawSegmentCounts(counts, angle) {
+  const active = getActiveGames();
+  if (active.length === 0) return;
+  const size = canvas.clientWidth;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = (size / 2) - 8;
+  const sliceAngle = (Math.PI * 2) / active.length;
+  const total = Object.values(counts).reduce((s, v) => s + v, 0);
+
+  active.forEach((game, i) => {
+    const mid = angle + i * sliceAngle + sliceAngle / 2;
+    const labelR = r * 0.58;
+    const lx = cx + Math.cos(mid) * labelR;
+    const ly = cy + Math.sin(mid) * labelR;
+    const count = counts[game.name] || 0;
+    const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+
+    ctx.save();
+    ctx.translate(lx, ly);
+
+    // Measure text to size the pill dynamically
+    const countLine = String(count);
+    const pctLine = `${pct}%`;
+    ctx.font = '800 15px Nunito,sans-serif';
+    const countW = ctx.measureText(countLine).width;
+    ctx.font = '600 12px Nunito,sans-serif';
+    const pctW = ctx.measureText(pctLine).width;
+    const textW = Math.max(countW, pctW);
+    const pillW = textW + 16, pillH = 36;
+
+    // Pill background
+    ctx.beginPath();
+    ctx.roundRect(-pillW / 2, -pillH / 2, pillW, pillH, 6);
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Count (big)
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '800 15px Nunito,sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(countLine, 0, -8);
+
+    // Percentage (smaller, muted)
+    ctx.font = '600 12px Nunito,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText(pctLine, 0, 10);
+
+    ctx.restore();
+  });
+}
+
+function startStressTest() {
+  const active = getActiveGames();
+  if (active.length === 0) return;
+  if (stressTestTimer) stopStressTest();
+
+  const TOTAL = 10000;
+  const BATCH = 100; // picks per frame
+  let done = 0;
+  stressTestCounts = {};
+  active.forEach(g => { stressTestCounts[g.name] = 0; });
+
+  const btn = document.getElementById('stress-test-btn');
+  if (btn) btn.textContent = '⏹ Stop simulation';
+
+  function step() {
+    for (let i = 0; i < BATCH && done < TOTAL; i++, done++) {
+      const winner = pickWinner(active);
+      stressTestCounts[winner.name] = (stressTestCounts[winner.name] || 0) + 1;
+    }
+    drawWheel(currentAngle);
+    drawSegmentCounts(stressTestCounts, currentAngle);
+    if (done < TOTAL) {
+      stressTestTimer = requestAnimationFrame(step);
+    } else {
+      stressTestTimer = null;
+      if (btn) btn.textContent = '🎲 Simulate 10,000 spins';
+      showStressResults(stressTestCounts, TOTAL, active);
+      // keep stressTestCounts so numbers stay on wheel after modal closes
+    }
+  }
+  stressTestTimer = requestAnimationFrame(step);
+}
+
+// Chi-square critical values at p=0.05 indexed by degrees of freedom (1–20)
+const CHI2_CRIT = [0,3.84,5.99,7.81,9.49,11.07,12.59,14.07,15.51,16.92,18.31,19.68,21.03,22.36,23.68,25.00,26.30,27.59,28.87,30.14,31.41];
+
+function showStressResults(counts, total, active) {
+  const n = active.length;
+  const expected = total / n;
+
+  // Chi-square goodness-of-fit
+  let chi2 = 0;
+  active.forEach(g => {
+    const o = counts[g.name] || 0;
+    chi2 += Math.pow(o - expected, 2) / expected;
+  });
+  const df = n - 1;
+  const crit = CHI2_CRIT[Math.min(df, 20)] || 31.41;
+  const passed = chi2 < crit;
+
+  // Max deviation from expected %
+  let maxDev = 0;
+  active.forEach(g => {
+    const dev = Math.abs(((counts[g.name] || 0) / total * 100) - (100 / n));
+    if (dev > maxDev) maxDev = dev;
+  });
+
+  const icon = passed ? '✅' : '⚠️';
+  const heading = passed ? 'Looks perfectly fair!' : 'Unusual distribution';
+  const body = passed
+    ? `Chi-square test passed (χ²\u202f=\u202f${chi2.toFixed(1)}, critical\u202f${crit.toFixed(1)} at p=0.05). The largest deviation from expected was ${maxDev.toFixed(2)}% — well within normal random variance.`
+    : `Chi-square test flagged a skew (χ²\u202f=\u202f${chi2.toFixed(1)} > ${crit.toFixed(1)}). Max deviation ${maxDev.toFixed(2)}%. This can happen by chance 5% of the time — try running again.`;
+
+  // Build table rows
+  const rows = active.map(g => {
+    const o = counts[g.name] || 0;
+    const pct = (o / total * 100).toFixed(1);
+    const expPct = (100 / n).toFixed(1);
+    const fillPct = Math.min(100, (o / total) * n * 100); // relative to expected = 100%
+    return `<tr>
+      <td>${g.name}</td>
+      <td>${o.toLocaleString()}</td>
+      <td>${pct}%</td>
+      <td>${expPct}%</td>
+      <td><div class="stress-bar-wrap"><div class="stress-bar-fill" style="width:${fillPct}%"></div></div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('stress-results-body').innerHTML = `
+    <div class="stress-verdict">
+      <span class="verdict-icon">${icon}</span>
+      <span class="verdict-text"><strong>${heading}</strong>${body}</span>
+    </div>
+    <table class="stress-table">
+      <thead><tr><th>Game</th><th>Picks</th><th>Actual</th><th>Expected</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p class="stress-chi">χ²\u202f=\u202f${chi2.toFixed(2)} &nbsp;·&nbsp; df\u202f=\u202f${df} &nbsp;·&nbsp; ${total.toLocaleString()} spins</p>
+  `;
+  document.getElementById('stress-overlay').classList.add('visible');
+}
+
+function stopStressTest() {
+  if (stressTestTimer) { cancelAnimationFrame(stressTestTimer); stressTestTimer = null; }
+  stressTestCounts = null;
+  drawWheel(currentAngle);
+  const btn = document.getElementById('stress-test-btn');
+  if (btn) btn.textContent = '🎲 Simulate 10,000 spins';
 }
 
 function getActiveGames() {
@@ -1676,6 +2067,7 @@ function drawWheel(angle) {
   ctx.restore();
 
   drawHub(cx, cy, r);
+  if (stressTestCounts) drawSegmentCounts(stressTestCounts, angle);
 }
 
 function drawHub(cx, cy, r) {
@@ -1881,6 +2273,11 @@ function showResult(game) {
   } else {
     resultLink.style.display = 'none';
   }
+  recordSpin(game);
+  renderFairnessFooter();
+  renderPickBadges();
+  const statsBody = document.getElementById('stats-body');
+  if (statsBody && statsBody.classList.contains('visible')) renderStatsPanel();
   resultOverlay.classList.add('visible');
   launchConfetti();
 }
@@ -2023,6 +2420,7 @@ function renderGameList() {
 
     gameListEl.appendChild(li);
   });
+  renderPickBadges();
 }
 
 // ─── CSV Import ───
@@ -2205,10 +2603,33 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   if (!confirm('Reset to default games? This will remove all custom and library games.')) return;
   games = DEFAULT_GAMES.map(g => ({ ...g }));
   saveGames();
+  clearHistory();
   renderGameList();
   renderLibraryList();
   resizeCanvas();
   drawWheel(currentAngle);
+});
+
+document.getElementById('stats-toggle-btn').addEventListener('click', () => {
+  const btn = document.getElementById('stats-toggle-btn');
+  const body = document.getElementById('stats-body');
+  btn.classList.toggle('open');
+  body.classList.toggle('visible');
+  if (body.classList.contains('visible')) renderStatsPanel();
+});
+
+document.getElementById('clear-history-btn').addEventListener('click', () => {
+  clearHistory();
+  renderStatsPanel();
+});
+
+document.getElementById('stress-test-btn').addEventListener('click', () => {
+  if (stressTestTimer) stopStressTest();
+  else startStressTest();
+});
+
+document.getElementById('stress-close').addEventListener('click', () => {
+  document.getElementById('stress-overlay').classList.remove('visible');
 });
 
 // ─── Banner Text ───
