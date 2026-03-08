@@ -549,6 +549,15 @@ body::after {
   color: var(--text-secondary);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
 /* ─── Accessibility: focus styles ─── */
 :focus-visible {
   outline: 2px solid var(--accent-teal);
@@ -1384,6 +1393,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
       <div class="wheel-wrap">
         <div class="wheel-stage" id="wheel-stage">
           <canvas class="wheel-canvas" id="wheel-canvas"></canvas>
+          <div id="segment-announce" class="sr-only" aria-live="assertive"></div>
           <div class="pointer" id="pointer">
         <svg width="40" height="54" viewBox="0 0 40 54" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -1541,8 +1551,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
       <div class="library-body" id="a11y-body" style="gap:0.5rem">
         <label class="sign-toggle-label"><input type="checkbox" id="reduce-motion-cb"> Reduce motion</label>
         <label class="sign-toggle-label"><input type="checkbox" id="high-contrast-cb"> High contrast focus</label>
+        <label class="sign-toggle-label"><input type="checkbox" id="show-modal-cb" checked> Show result popup after spin</label>
         <p style="font-size:0.72rem;color:var(--text-muted);line-height:1.5;margin:0">
-          Keyboard: <strong>Tab</strong> to navigate, <strong>Enter/Space</strong> to activate, <strong>Esc</strong> to close dialogs.
+          Keyboard: <strong>Space/S</strong> spin, <strong>O</strong> open winner's link, <strong>Esc</strong> close dialogs. Click a wheel segment to open its link.
         </p>
       </div>
     </div>
@@ -1669,6 +1680,9 @@ let games = [];
 let spinning = false;
 let currentAngle = 0;
 let audioCtx = null;
+let lastWinner = null;
+let showModalAfterSpin = true;
+let highlightedSegment = -1; // keyboard segment navigation index
 
 // ─── DOM ───
 const canvas = document.getElementById('wheel-canvas');
@@ -2165,6 +2179,23 @@ function drawWheel(angle) {
     ctx.restore();
   });
 
+  // Keyboard-highlighted segment overlay
+  if (highlightedSegment >= 0 && highlightedSegment < active.length) {
+    const hStart = angle + highlightedSegment * sliceAngle;
+    const hEnd = hStart + sliceAngle;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, hStart, hEnd);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // Metallic rim
   const rimWidth = 9;
   ctx.save();
@@ -2324,6 +2355,7 @@ function spin() {
   initAudio();
   spinning = true;
   spinBtn.disabled = true;
+  highlightedSegment = -1;
 
   const sliceAngle = (Math.PI * 2) / active.length;
 
@@ -2419,14 +2451,23 @@ function spin() {
         setTimeout(() => {
           spinning = false;
           spinBtn.disabled = false;
+          lastWinner = winner;
           if (autoSpinning) {
             // Skip modal — just record and immediately spin again
             recordSpin(winner);
             renderPickBadges();
             debugInfo.textContent = `Auto-spin #${autoSpinCount} — last: ${winner.name}`;
             spin();
-          } else {
+          } else if (showModalAfterSpin) {
             showResult(winner);
+          } else {
+            // No modal — still record and play victory
+            playVictory();
+            recordSpin(winner);
+            renderPickBadges();
+            const statsBody = document.getElementById('stats-body');
+            if (statsBody && statsBody.classList.contains('visible')) renderStatsPanel();
+            launchConfetti();
           }
         }, 650);
       }
@@ -2853,6 +2894,27 @@ sidebarBackdrop.addEventListener('click', () => {
 // ─── Spin ───
 spinBtn.addEventListener('click', spin);
 
+// ─── Click wheel segment to open URL ───
+canvas.addEventListener('click', (e) => {
+  if (spinning) return;
+  const active = getActiveGames();
+  if (active.length === 0) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left - rect.width / 2;
+  const y = e.clientY - rect.top - rect.height / 2;
+  const dist = Math.sqrt(x * x + y * y);
+  const radius = rect.width / 2;
+  if (dist > radius || dist < radius * 0.12) return; // outside wheel or on hub
+  let angle = Math.atan2(y, x) - currentAngle;
+  angle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const sliceAngle = (Math.PI * 2) / active.length;
+  const idx = Math.floor(angle / sliceAngle);
+  const game = active[idx];
+  if (game && game.url) {
+    window.open(game.url, '_blank', 'noopener');
+  }
+});
+
 // ─── Version Info ───
 const APP_VERSION = '1.0.0';
 const DEPLOY_DATE = '08 Mar 2026 20:20 UTC';
@@ -2969,6 +3031,16 @@ highContrastCb.addEventListener('change', () => {
   localStorage.setItem('highContrastFocus', highContrastCb.checked);
 });
 
+const showModalCb = document.getElementById('show-modal-cb');
+if (localStorage.getItem('showModalAfterSpin') === 'false') {
+  showModalCb.checked = false;
+  showModalAfterSpin = false;
+}
+showModalCb.addEventListener('change', () => {
+  showModalAfterSpin = showModalCb.checked;
+  localStorage.setItem('showModalAfterSpin', showModalCb.checked);
+});
+
 // Escape key closes dialogs and sidebar
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
@@ -2981,6 +3053,50 @@ document.addEventListener('keydown', (e) => {
       sidebarBackdrop.classList.remove('visible');
       sidebarToggle.focus();
     }
+    return;
+  }
+  const tag = document.activeElement.tagName;
+  const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  if (inInput) return;
+
+  // Space or S triggers a spin
+  if ((e.key === ' ' || e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    spin();
+    return;
+  }
+
+  // Arrow keys navigate wheel segments
+  const active = getActiveGames();
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && active.length > 0 && !spinning) {
+    e.preventDefault();
+    if (highlightedSegment < 0) {
+      highlightedSegment = 0;
+    } else if (e.key === 'ArrowRight') {
+      highlightedSegment = (highlightedSegment + 1) % active.length;
+    } else {
+      highlightedSegment = (highlightedSegment - 1 + active.length) % active.length;
+    }
+    drawWheel(currentAngle);
+    const g = active[highlightedSegment];
+    const announce = document.getElementById('segment-announce');
+    announce.textContent = g.name + (g.url ? ' — press O to open link' : '');
+    return;
+  }
+
+  // O opens the highlighted segment's URL, or last winner's URL
+  if ((e.key === 'o' || e.key === 'O') && !e.ctrlKey && !e.metaKey) {
+    const active = getActiveGames();
+    let target = null;
+    if (highlightedSegment >= 0 && highlightedSegment < active.length) {
+      target = active[highlightedSegment];
+    } else if (lastWinner) {
+      target = lastWinner;
+    }
+    if (target && target.url) {
+      window.open(target.url, '_blank', 'noopener');
+    }
+    return;
   }
 });
 
