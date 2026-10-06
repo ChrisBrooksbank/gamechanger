@@ -1593,6 +1593,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 <script type="module">
 import { pickWinner, cryptoRandom } from './select.js';
 import { computeTargetAngle, computeTotalTravel } from './spin.js';
+import { escapeHtml, safeUrl, parseGameCsv, gamesToCsv } from './util.js';
 // ─── Default Games ───
 const DEFAULT_GAMES = [
   { name: 'TimeGuessr', url: 'https://timeguessr.com/', enabled: true, custom: false },
@@ -1800,7 +1801,7 @@ function renderStatsPanel() {
     const pct = h.totalSpins > 0 ? ((count / h.totalSpins) * 100).toFixed(1) : '0.0';
     const expPct = n > 0 ? (100 / n).toFixed(1) : '0.0';
     html += `<div class="stats-row">
-      <span class="stats-name">${game.name}</span>
+      <span class="stats-name">${escapeHtml(game.name)}</span>
       <span class="stats-count">${count}</span>
       <span class="stats-pct">${pct}% <span style="color:var(--text-muted);font-weight:400">(exp ${expPct}%)</span></span>
     </div>`;
@@ -1948,7 +1949,7 @@ function showStressResults(counts, total, active) {
     const expPct = (100 / n).toFixed(1);
     const fillPct = Math.min(100, (o / total) * n * 100); // relative to expected = 100%
     return `<tr>
-      <td>${g.name}</td>
+      <td>${escapeHtml(g.name)}</td>
       <td>${o.toLocaleString()}</td>
       <td>${pct}%</td>
       <td>${expPct}%</td>
@@ -2499,8 +2500,9 @@ function spin() {
 function showResult(game) {
   playVictory();
   resultName.textContent = game.name;
-  if (game.url) {
-    resultLink.href = game.url;
+  const url = safeUrl(game.url);
+  if (url) {
+    resultLink.href = url;
     resultLink.style.display = '';
   } else {
     resultLink.style.display = 'none';
@@ -2677,16 +2679,14 @@ document.getElementById('import-file').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
+function hasGame(name) {
+  return games.some(g => g.name.toLowerCase() === name.toLowerCase());
+}
+
 function parseAndImportCSV(text) {
   let added = 0;
-  text.split('\n').forEach(line => {
-    line = line.trim();
-    if (!line || line.startsWith('#')) return;
-    const commaIdx = line.indexOf(',');
-    const name = (commaIdx >= 0 ? line.slice(0, commaIdx) : line).trim();
-    const url = (commaIdx >= 0 ? line.slice(commaIdx + 1) : '').trim();
-    if (!name) return;
-    if (games.some(g => g.name.toLowerCase() === name.toLowerCase())) return;
+  parseGameCsv(text).forEach(({ name, url }) => {
+    if (hasGame(name)) return;
     games.push({ name, url, enabled: true, custom: true });
     added++;
   });
@@ -2802,8 +2802,18 @@ document.getElementById('add-btn').addEventListener('click', () => {
   const name = nameInput.value.trim();
   const url = urlInput.value.trim();
   if (!name) { nameInput.focus(); return; }
+  if (hasGame(name)) {
+    nameInput.setCustomValidity(`"${name}" is already on the list`);
+    nameInput.reportValidity();
+    return;
+  }
+  if (url && !safeUrl(url)) {
+    urlInput.setCustomValidity('Enter an http(s) link, e.g. https://example.com');
+    urlInput.reportValidity();
+    return;
+  }
 
-  games.push({ name, url: url || '', enabled: true, custom: true });
+  games.push({ name, url: safeUrl(url), enabled: true, custom: true });
   saveGames();
   nameInput.value = '';
   urlInput.value = '';
@@ -2812,22 +2822,23 @@ document.getElementById('add-btn').addEventListener('click', () => {
   drawWheel(currentAngle);
 });
 
-document.getElementById('input-name').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('add-btn').click();
-});
-document.getElementById('input-url').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('add-btn').click();
+['input-name', 'input-url'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('add-btn').click();
+  });
+  el.addEventListener('input', () => el.setCustomValidity(''));
 });
 
 // ─── Export CSV ───
 document.getElementById('export-btn').addEventListener('click', () => {
-  const csv = games.map(g => g.url ? `${g.name},${g.url}` : g.name).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
+  const blob = new Blob([gamesToCsv(games)], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'gamechanger-games.csv';
   a.click();
-  URL.revokeObjectURL(a.href);
+  // Revoking synchronously can cancel the download in some browsers
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
 
 // ─── Reset to Defaults ───
@@ -2869,14 +2880,22 @@ document.getElementById('stress-close').addEventListener('click', () => {
   const signEl = document.getElementById('sign-text');
   const input  = document.getElementById('banner-text-input');
   const saved  = localStorage.getItem('bannerText');
+  // Render as text (never HTML) with line breaks preserved
+  function setSign(text) {
+    signEl.replaceChildren();
+    text.split('\n').forEach((line, i) => {
+      if (i > 0) signEl.appendChild(document.createElement('br'));
+      signEl.appendChild(document.createTextNode(line));
+    });
+  }
   if (saved && signEl) {
-    signEl.innerHTML = saved.replace(/\n/g, '<br>');
+    setSign(saved);
     input.value = saved;
   }
   document.getElementById('banner-text-save').addEventListener('click', () => {
     const val = input.value.trim();
     if (!val) return;
-    signEl.innerHTML = val.replace(/\n/g, '<br>');
+    setSign(val);
     localStorage.setItem('bannerText', val);
   });
 })();
@@ -2909,10 +2928,8 @@ canvas.addEventListener('click', (e) => {
   angle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const sliceAngle = (Math.PI * 2) / active.length;
   const idx = Math.floor(angle / sliceAngle);
-  const game = active[idx];
-  if (game && game.url) {
-    window.open(game.url, '_blank', 'noopener');
-  }
+  const url = active[idx] && safeUrl(active[idx].url);
+  if (url) window.open(url, '_blank', 'noopener');
 });
 
 // ─── Version Info ───
@@ -3093,9 +3110,8 @@ document.addEventListener('keydown', (e) => {
     } else if (lastWinner) {
       target = lastWinner;
     }
-    if (target && target.url) {
-      window.open(target.url, '_blank', 'noopener');
-    }
+    const url = target && safeUrl(target.url);
+    if (url) window.open(url, '_blank', 'noopener');
     return;
   }
 });
