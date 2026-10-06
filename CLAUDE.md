@@ -18,8 +18,9 @@ GameChanger Wheel — a vanilla JS single-page app for spinning a wheel to pick 
 
 ```
 index.html      — Main page
-spin.js         — Wheel spinning logic and canvas rendering
-select.js       — Game selection and list management
+spin.js         — Pure wheel-angle maths (rendering lives in index.html)
+select.js       — Cryptographically random winner selection
+util.js         — HTML escaping, URL sanitising, CSV parse/serialise
 sw.js           — Service worker (PWA caching)
 manifest.json   — PWA manifest
 ```
@@ -31,9 +32,9 @@ No build step. Edit JS/HTML directly. Test by opening `index.html` in a browser 
 ## Testing
 
 ```bash
-npm test    # Runs unit tests (spin.test.js, select.test.js)
+npm test    # Runs unit tests (spin.test.js, select.test.js, util.test.js)
 ```
 
 ## Deployment
 
-Deployed on Netlify as a static site. No build command needed.
+Deployed on Netlify as a static site. No build command needed. Bump `CACHE` in `sw.js` when shipping changes, and add any new ES module to its `PRECACHE` list.
