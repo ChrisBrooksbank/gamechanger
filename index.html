@@ -1684,6 +1684,8 @@ let audioCtx = null;
 let lastWinner = null;
 let showModalAfterSpin = true;
 let highlightedSegment = -1; // keyboard segment navigation index
+let spinGames = null;        // games frozen on the wheel while a spin is in flight
+let spinId = 0;              // bumps each spin so stale animation loops stop
 
 // ─── DOM ───
 const canvas = document.getElementById('wheel-canvas');
@@ -1730,7 +1732,7 @@ function loadHistory() {
   if (stored) {
     try {
       const h = JSON.parse(stored);
-      if (typeof h.totalSpins === 'number' && typeof h.picks === 'object') return h;
+      if (h && typeof h.totalSpins === 'number' && h.picks && typeof h.picks === 'object') return h;
     } catch(e) {}
   }
   return { totalSpins: 0, picks: {} };
@@ -1821,7 +1823,7 @@ let stressTestCounts = null; // null = inactive, object = active
 let stressTestTimer = null;
 
 function drawSegmentCounts(counts, angle) {
-  const active = getActiveGames();
+  const active = wheelGames();
   if (active.length === 0) return;
   const size = canvas.clientWidth;
   const cx = size / 2;
@@ -1878,7 +1880,7 @@ function drawSegmentCounts(counts, angle) {
 
 function startStressTest() {
   const active = getActiveGames();
-  if (active.length === 0) return;
+  if (active.length === 0 || spinning) return;
   if (stressTestTimer) stopStressTest();
   // Close sidebar on mobile so the wheel is visible
   sidebar.classList.remove('open');
@@ -1898,8 +1900,7 @@ function startStressTest() {
       const winner = pickWinner(active);
       stressTestCounts[winner.name] = (stressTestCounts[winner.name] || 0) + 1;
     }
-    drawWheel(currentAngle);
-    drawSegmentCounts(stressTestCounts, currentAngle);
+    drawWheel(currentAngle); // also draws the count pills
     if (done < TOTAL) {
       stressTestTimer = requestAnimationFrame(step);
     } else {
@@ -1983,13 +1984,22 @@ function getActiveGames() {
   return games.filter(g => g.enabled);
 }
 
+// What the wheel shows: the frozen spin list mid-spin, otherwise the live list.
+// Editing the list mid-spin must not reshape the wheel, or it would stop on a
+// different segment than the predetermined winner.
+function wheelGames() {
+  return spinGames || getActiveGames();
+}
+
 // ─── Audio ───
 function initAudio() {
   if (audioCtx) {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     return;
   }
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return; // no Web Audio — spin silently
+  audioCtx = new Ctx();
 }
 
 function playTick(omega, impulse = 0.5) {
@@ -2075,7 +2085,7 @@ function resizeCanvas() {
 }
 
 function drawWheel(angle) {
-  const active = getActiveGames();
+  const active = wheelGames();
   const size = canvas.clientWidth;
   const cx = size / 2;
   const cy = size / 2;
@@ -2353,8 +2363,10 @@ function spin() {
   // Hide any active simulation results before spinning
   if (stressTestTimer || stressTestCounts) stopStressTest();
 
-  initAudio();
+  try { initAudio(); } catch (e) { /* audio unavailable — spin silently */ }
   spinning = true;
+  spinGames = active;
+  const myId = ++spinId;
   spinBtn.disabled = true;
   highlightedSegment = -1;
 
@@ -2402,6 +2414,7 @@ function spin() {
   const spinStart = performance.now();
 
   function animate(now) {
+    if (myId !== spinId) return; // superseded by a newer spin
     try {
     if (lastTime === null) { lastTime = now; requestAnimationFrame(animate); return; }
     const dt = now - lastTime;
@@ -2453,6 +2466,11 @@ function spin() {
           spinning = false;
           spinBtn.disabled = false;
           lastWinner = winner;
+          // Release the frozen list; redraw if it was edited mid-spin
+          const edited = spinGames.length !== getActiveGames().length
+            || spinGames.some((g, i) => g !== getActiveGames()[i]);
+          spinGames = null;
+          if (edited) drawWheel(currentAngle);
           if (autoSpinning) {
             // Skip modal — just record and immediately spin again
             recordSpin(winner);
@@ -2489,6 +2507,7 @@ function spin() {
     }
     } catch (e) {
       spinning = false;
+      spinGames = null;
       spinBtn.disabled = false;
     }
   }
