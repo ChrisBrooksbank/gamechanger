@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GameChanger — Spin the Wheel</title>
 <link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <meta name="theme-color" content="#d4a017">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -2394,10 +2396,12 @@ function spin() {
   const randomOffset = (0.1 + cryptoRandom() * 0.8) * sliceAngle;
   const targetAngle  = computeTargetAngle(winnerIndex, active.length, randomOffset);
   // Add enough full rotations for a dramatic spin (6–15 rotations); must be integer
-  const nSpins       = 6 + Math.floor(cryptoRandom() * 10);
+  // Reduce motion: one short turn instead of a long whirl
+  const calm         = reducedMotion();
+  const nSpins       = calm ? 1 : 6 + Math.floor(cryptoRandom() * 10);
   const startAngle   = currentAngle;
   const totalTravel  = computeTotalTravel(targetAngle, startAngle, nSpins);
-  const duration = 3500 + cryptoRandom() * 2500; // 3.5–6.0 seconds
+  const duration = calm ? 1200 : 3500 + cryptoRandom() * 2500; // 3.5–6.0 seconds
 
   let lastTime = null;
   let prevAngle = currentAngle;
@@ -2493,7 +2497,7 @@ function spin() {
     } else {
       // Spring-settle wobble: sinusoidal decay; clapper continues settling naturally above
       const elapsed = now - settleStart;
-      const settleDuration = 500;
+      const settleDuration = calm ? 0 : 500;
       if (elapsed < settleDuration) {
         const t = elapsed / settleDuration;
         const decay = Math.exp(-t * 5.5);
@@ -2532,11 +2536,14 @@ function showResult(game) {
   const statsBody = document.getElementById('stats-body');
   if (statsBody && statsBody.classList.contains('visible')) renderStatsPanel();
   resultOverlay.classList.add('visible');
+  (url ? resultLink : resultRespin).focus();
   launchConfetti();
 }
 
 function hideResult() {
+  if (!resultOverlay.classList.contains('visible')) return;
   resultOverlay.classList.remove('visible');
+  spinBtn.focus();
 }
 
 resultClose.addEventListener('click', hideResult);
@@ -2554,7 +2561,13 @@ function resizeConfetti() {
   confettiCanvas.height = window.innerHeight;
 }
 
+function reducedMotion() {
+  return document.body.classList.contains('reduce-motion')
+    || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 function launchConfetti() {
+  if (reducedMotion()) return;
   resizeConfetti();
   confettiParticles = [];
   const colors = ['#ff6b6b','#ffc857','#4ecdc4','#a06cd5','#ff9f43','#6ec6ff','#ff78ae','#7bed9f','#ffd93d','#fd79a8'];
@@ -3094,9 +3107,13 @@ document.addEventListener('keydown', (e) => {
   const tag = document.activeElement.tagName;
   const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   if (inInput) return;
+  // Space must keep activating whatever button/link has focus
+  if (e.key === ' ' && (tag === 'BUTTON' || tag === 'A')) return;
+  const dialogOpen = resultOverlay.classList.contains('visible')
+    || document.getElementById('stress-overlay').classList.contains('visible');
 
-  // Space or S triggers a spin
-  if ((e.key === ' ' || e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+  // Space or S triggers a spin (not behind an open dialog)
+  if ((e.key === ' ' || e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && !e.altKey && !dialogOpen) {
     e.preventDefault();
     spin();
     return;
@@ -3104,7 +3121,7 @@ document.addEventListener('keydown', (e) => {
 
   // Arrow keys navigate wheel segments
   const active = getActiveGames();
-  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && active.length > 0 && !spinning) {
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && active.length > 0 && !spinning && !dialogOpen) {
     e.preventDefault();
     if (highlightedSegment < 0) {
       highlightedSegment = 0;
@@ -3212,7 +3229,7 @@ window.addEventListener('resize', () => {
     navigator.serviceWorker.register('/sw.js').then(reg => {
       function offerUpdate() {
         showToast('🔄 Update available', 'Update now', () => {
-          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
         });
       }
 
